@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Payment extends Model
 {
-    protected $fillable = ['subscription_id', 'method', 'amount', 'status'];
+    protected $fillable = ['subscriptionId', 'method', 'amount', 'status'];
 
     public function subscription(): BelongsTo
     {

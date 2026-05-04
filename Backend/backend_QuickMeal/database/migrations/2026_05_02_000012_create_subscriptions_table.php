@@ -11,9 +11,9 @@ return new class extends Migration
     {
         Schema::create('subscriptions', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
-            $table->date('start_date');
-            $table->date('end_date');
+            $table->foreignId('userId')->constrained('users')->onDelete('cascade');
+            $table->date('startDate');
+            $table->date('endDate');
             $table->string('status')->default('active'); // active, expired, cancelled
             $table->timestamps();
         });

@@ -8,16 +8,11 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Food extends Model
 {
-    protected $fillable = ['restaurant_id', 'name', 'price', 'image_url', 'estimated_delivery_time'];
+    protected $fillable = ['restaurantId', 'name', 'price', 'imageUrl', 'estimatedDeliveryTime'];
 
     public function restaurant(): BelongsTo
     {
         return $this->belongsTo(Restaurant::class);
-    }
-
-    public function orderItems(): HasMany
-    {
-        return $this->hasMany(OrderItem::class);
     }
 
     public function recommendations()

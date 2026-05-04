@@ -11,11 +11,11 @@ return new class extends Migration
     {
         Schema::create('foods', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('restaurant_id')->constrained('restaurants')->onDelete('cascade');
+            $table->foreignId('restaurantId')->constrained('restaurants')->onDelete('cascade');
             $table->string('name');
             $table->decimal('price', 10, 2);
-            $table->string('image_url')->nullable();
-            $table->integer('estimated_delivery_time'); // in minutes
+            $table->string('imageUrl')->nullable();
+            $table->integer('estimatedDeliveryTime'); // in minutes
             $table->timestamps();
         });
     }

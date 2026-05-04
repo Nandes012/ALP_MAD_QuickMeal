@@ -8,7 +8,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class RecipeIngredient extends Model
 {
-    protected $fillable = ['recipe_id', 'ingredient_id', 'quantity', 'price_estimate'];
+    protected $table = 'recipeIngredients';
+
+    protected $fillable = ['recipeId', 'ingredientId', 'quantity', 'priceEstimate'];
 
     public function recipe(): BelongsTo
     {

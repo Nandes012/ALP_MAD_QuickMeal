@@ -7,7 +7,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class RecommendationItem extends Model
 {
-    protected $fillable = ['recommendation_id', 'recipe_id', 'food_id'];
+    protected $table = 'recommendationItems';
+
+    protected $fillable = ['recommendationId', 'recipeId', 'foodId'];
 
     public function recommendation(): BelongsTo
     {

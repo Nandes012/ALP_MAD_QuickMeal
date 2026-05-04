@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Recipe extends Model
 {
-    protected $fillable = ['name', 'description', 'cooking_time', 'difficulty', 'image_url'];
+    protected $fillable = ['name', 'description', 'cookingTime', 'difficulty', 'imageUrl'];
 
     public function ingredients(): HasMany
     {

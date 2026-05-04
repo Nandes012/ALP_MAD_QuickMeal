@@ -11,7 +11,7 @@ return new class extends Migration
     {
         Schema::create('payments', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('subscription_id')->constrained('subscriptions')->onDelete('cascade');
+            $table->foreignId('subscriptionId')->constrained('subscriptions')->onDelete('cascade');
             $table->string('method'); // credit_card, debit_card, e_wallet, transfer, etc
             $table->decimal('amount', 10, 2);
             $table->string('status')->default('pending'); // pending, completed, failed, refunded

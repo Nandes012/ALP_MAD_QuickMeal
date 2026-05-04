@@ -8,11 +8,11 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Subscription extends Model
 {
-    protected $fillable = ['user_id', 'start_date', 'end_date', 'status'];
+    protected $fillable = ['userId', 'startDate', 'endDate', 'status'];
 
     protected $casts = [
-        'start_date' => 'date',
-        'end_date' => 'date',
+        'startDate' => 'date',
+        'endDate' => 'date',
     ];
 
     public function user(): BelongsTo

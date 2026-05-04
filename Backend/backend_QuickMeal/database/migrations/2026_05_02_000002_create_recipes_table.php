@@ -13,9 +13,9 @@ return new class extends Migration
             $table->id();
             $table->string('name');
             $table->text('description');
-            $table->integer('cooking_time');
+            $table->integer('cookingTime');
             $table->string('difficulty');
-            $table->string('image_url')->nullable();
+            $table->string('imageUrl')->nullable();
             $table->timestamps();
         });
     }
