@@ -3,10 +3,15 @@ import {
   Text,
   StyleSheet,
 } from "react-native";
+import { colors } from "@/components/ui/styles";
 
-export default function CustomButton({ title, onPress }: any) {
+export default function CustomButton({ title, onPress, fullWidth }: any) {
   return (
-    <TouchableOpacity style={styles.button} onPress={onPress} activeOpacity={0.8}>
+    <TouchableOpacity
+      style={[styles.button, fullWidth ? styles.fullWidth : null]}
+      onPress={onPress}
+      activeOpacity={0.8}
+    >
       <Text style={styles.text}>{title}</Text>
     </TouchableOpacity>
   );
@@ -14,7 +19,7 @@ export default function CustomButton({ title, onPress }: any) {
 
 const styles = StyleSheet.create({
   button: {
-    backgroundColor: "#9C5B36",
+    backgroundColor: colors.button,
     padding: 16,
     borderRadius: 12,
     alignItems: "center",
@@ -23,5 +28,8 @@ const styles = StyleSheet.create({
   text: {
     color: "#fff",
     fontWeight: "bold",
+  },
+  fullWidth: {
+    width: "100%",
   },
 });

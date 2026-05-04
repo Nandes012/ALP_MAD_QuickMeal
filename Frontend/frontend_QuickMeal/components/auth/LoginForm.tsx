@@ -1,11 +1,14 @@
 import React, { useState } from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import { useRouter } from "expo-router";
 import CustomInput from "@/components/ui/customInput";
 import CustomButton from "@/components/ui/customButton";
+import { shared } from "@/components/ui/styles";
 
 export default function LoginForm({ onLogin }: { onLogin?: (u: string, p: string) => void }) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const router = useRouter();
 
   function submit() {
     // simple validation
@@ -20,49 +23,28 @@ export default function LoginForm({ onLogin }: { onLogin?: (u: string, p: string
   }
 
   return (
-    <View style={styles.form}>
-      <Text style={styles.label}>Username</Text>
+    <View style={shared.form}>
+      <Text style={shared.label}>Username</Text>
       <CustomInput placeholder="St mutmainnah" value={username} onChangeText={setUsername} />
 
-      <Text style={styles.label}>Password</Text>
+      <Text style={shared.label}>Password</Text>
       <CustomInput placeholder="Password" value={password} onChangeText={setPassword} secureTextEntry />
 
-      <CustomButton title="Login" onPress={submit} />
+      <View style={shared.buttonWrap}>
+        <CustomButton title="Login" onPress={submit} fullWidth />
+      </View>
 
-      <View style={styles.row}>
+      <View style={shared.row}>
         <TouchableOpacity>
-          <Text style={styles.link}>Forgot Password?</Text>
+          <Text style={shared.link}>Forgot Password?</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity>
-          <Text style={styles.link}>Sign Up</Text>
+        <TouchableOpacity onPress={() => router.push("/signup") }>
+          <Text style={shared.link}>Sign Up</Text>
         </TouchableOpacity>
       </View>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  form: {
-    width: "100%",
-    maxWidth: 360,
-    alignSelf: "center",
-    marginTop: 20,
-  },
-
-  label: {
-    marginBottom: 8,
-    color: "#5B3528",
-    fontWeight: "600",
-  },
-
-  row: {
-    marginTop: 12,
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-
-  link: {
-    color: "#5B3528",
-  },
-});
+// styles moved to shared styles

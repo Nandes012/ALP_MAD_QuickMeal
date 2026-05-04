@@ -4,6 +4,7 @@ import CustomButton from "@/components/ui/customButton";
 import CustomInput from "@/components/ui/customInput";
 import HeaderAuth from "@/components/ui/headerAuth";
 import LoginForm from "@/components/auth/LoginForm";
+import { shared } from "@/components/ui/styles";
 
 export default function Login() {
   return (
@@ -23,31 +24,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
   },
 
-  form: {
-    width: "100%",
-    maxWidth: 360,
-    alignSelf: "center",
-    marginTop: 20,
-  },
-
-  label: {
-    marginBottom: 8,
-    color: "#5B3528",
-    fontWeight: "600",
-  },
-
-  row: {
-    marginTop: 12,
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-
-  link: {
-    color: "#5B3528",
-  },
-  scrollContainer: {
-    flexGrow: 1,
-    alignItems: "center",
-    paddingBottom: 80,
-  },
+  // page-specific overrides (use shared for form/label/link/row)
+  scrollContainer: shared.scrollContainer,
 });
