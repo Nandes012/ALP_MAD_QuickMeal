@@ -2,6 +2,7 @@ import React from "react";
 import { SafeAreaView, ScrollView, StyleSheet } from "react-native";
 import HeaderAuth from "@/components/ui/headerAuth";
 import SignupForm from "@/components/auth/SignupForm";
+import { shared } from "@/components/ui/styles";
 
 export default function Signup() {
 	return (
@@ -16,7 +17,7 @@ export default function Signup() {
 }
 
 const styles = StyleSheet.create({
-	page: { flex: 1, backgroundColor: "#fff" },
-	scrollContainer: { flexGrow: 1, alignItems: "center", paddingBottom: 80 },
+	page: { flex: 1, backgroundColor: "#FFF8EF" },
+	scrollContainer: shared.scrollContainer,
 });
 
