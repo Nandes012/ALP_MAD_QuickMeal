@@ -11,15 +11,13 @@ export default function LoginForm({ onLogin }: { onLogin?: (u: string, p: string
   const router = useRouter();
 
   function submit() {
-    // simple validation
-    if (!username || !password) {
-      // in real app show toast / error UI
-      console.warn("username or password empty");
-      return;
-    }
-
+    // accept any username/password (no strict validation in dev)
     if (onLogin) onLogin(username, password);
     else console.log("Login attempt", { username, password });
+
+    // navigate to app home (replace so back doesn't return to login)
+    // use the tabs root so user lands on the main Home tab
+    router.replace('/(tabs)');
   }
 
   return (

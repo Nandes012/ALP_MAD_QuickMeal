@@ -40,7 +40,7 @@ export const shared = StyleSheet.create({
   scrollContainer: {
     flexGrow: 1,
     alignItems: "center",
-    paddingBottom: 80,
+    paddingBottom: 160,
   },
 });
 
