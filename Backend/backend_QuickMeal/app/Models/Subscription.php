@@ -24,4 +24,9 @@ class Subscription extends Model
     {
         return $this->hasMany(Payment::class);
     }
+
+    public function subscriptionHistory(): HasMany
+    {
+        return $this->hasMany(SubscriptionHistory::class, 'userId', 'userId');
+    }
 }
