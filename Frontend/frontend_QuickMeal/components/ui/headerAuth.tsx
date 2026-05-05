@@ -7,12 +7,17 @@ import {
 } from "react-native";
 import { colors } from "@/components/ui/styles";
 
-export default function HeaderAuth({ children, title, subtitle, titleStyle, subtitleStyle }: any) {
+export default function HeaderAuth({ children, title, subtitle, titleStyle, subtitleStyle, imageSource }: any) {
+  const resolvedImage =
+    typeof imageSource === "string"
+      ? { uri: imageSource }
+      : imageSource ?? require("../../assets/images/logo.jpg");
+
   return (
     <View style={styles.container}>
       {/* Header Image */}
       <Image
-        source={require("../../assets/images/logo.jpg")}
+        source={resolvedImage}
         style={styles.image}
         resizeMode="cover"
       />
