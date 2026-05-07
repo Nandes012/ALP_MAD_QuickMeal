@@ -3,14 +3,16 @@ import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
 import CustomInput from "@/components/ui/customInput";
 import CustomButton from "@/components/ui/customButton";
+import Toast from "@/components/ui/Toast";
 import { shared, colors } from "@/components/ui/styles";
 
 // Consolidated small components inside this file for simpler structure
-function FormField({ label, ...inputProps }: any) {
+function FormField({ label, error, ...inputProps }: any) {
   return (
     <View style={localStyles.fieldWrap}>
       <Text style={localStyles.label}>{label}</Text>
       <CustomInput {...inputProps} />
+      {error ? <Text style={localStyles.errorText}>{error}</Text> : null}
     </View>
   );
 }
@@ -33,16 +35,41 @@ export default function SignupForm({ onSignup }: { onSignup?: (data: any) => voi
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [nameError, setNameError] = useState("");
+  const [emailError, setEmailError] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+  const [confirmPasswordError, setConfirmPasswordError] = useState("");
+  const [toastVisible, setToastVisible] = useState(false);
+  const [toastMessage, setToastMessage] = useState("");
+  const [toastType, setToastType] = useState<"success" | "error" | "info" | "warning">("error");
 
   const router = useRouter();
 
+  const showToast = (message: string, type: "success" | "error" | "info" | "warning" = "error") => {
+    setToastMessage(message);
+    setToastType(type);
+    setToastVisible(true);
+  };
+
+  const clearErrors = () => {
+    setNameError("");
+    setEmailError("");
+    setPasswordError("");
+    setConfirmPasswordError("");
+  };
+
   async function submit() {
+    clearErrors();
+
     if (!name || !email || !password || !confirmPassword) {
-      alert("Please fill all fields");
+      if (!name) setNameError("Name is required");
+      if (!email) setEmailError("Email is required");
+      if (!password) setPasswordError("Password is required");
+      if (!confirmPassword) setConfirmPasswordError("Confirm password is required");
       return;
     }
     if (password !== confirmPassword) {
-      alert("Passwords do not match");
+      setConfirmPasswordError("Passwords do not match");
       return;
     }
 
@@ -73,7 +100,21 @@ export default function SignupForm({ onSignup }: { onSignup?: (data: any) => voi
 
       // SIGNUP FAILED
       if (!response.ok) {
-        alert(data.message || "Sign up failed");
+        // Check if it's a validation error (has errors object)
+        if (data.errors) {
+          if (data.errors.name) {
+            setNameError(data.errors.name[0]);
+          }
+          if (data.errors.email) {
+            setEmailError(data.errors.email[0]);
+          }
+          if (data.errors.password) {
+            setPasswordError(data.errors.password[0]);
+          }
+        } else {
+          // Generic error message
+          showToast(data.message || "Sign up failed", "error");
+        }
         setIsLoading(false);
         return;
       }
@@ -94,7 +135,7 @@ export default function SignupForm({ onSignup }: { onSignup?: (data: any) => voi
 
     } catch (error) {
       console.log("SIGNUP ERROR:", error);
-      alert("Could not connect to backend");
+      showToast("Could not connect to backend", "error");
       setIsLoading(false);
     }
   }
@@ -102,19 +143,65 @@ export default function SignupForm({ onSignup }: { onSignup?: (data: any) => voi
   return (
     <View style={[shared.form, { paddingHorizontal: 0 }]}>
 
-      <FormField label="Name" placeholder="St mutmainnah" value={name} onChangeText={setName} />
+      <FormField 
+        label="Name" 
+        placeholder="St mutmainnah" 
+        value={name} 
+        onChangeText={(text: string) => {
+          setName(text);
+          setNameError("");
+        }}
+        error={nameError}
+      />
 
-      <FormField label="Email" placeholder="smutmainnah@..." value={email} onChangeText={setEmail} keyboardType="email-address" />
+      <FormField 
+        label="Email" 
+        placeholder="smutmainnah@..." 
+        value={email} 
+        onChangeText={(text: string) => {
+          setEmail(text);
+          setEmailError("");
+        }}
+        keyboardType="email-address"
+        error={emailError}
+      />
 
-      <FormField label="Password" placeholder="Gowa020627" value={password} onChangeText={setPassword} secureTextEntry />
+      <FormField 
+        label="Password" 
+        placeholder="Gowa020627" 
+        value={password} 
+        onChangeText={(text: string) => {
+          setPassword(text);
+          setPasswordError("");
+        }}
+        secureTextEntry 
+        error={passwordError}
+      />
 
-      <FormField label="Confirm Password" placeholder="Gowa020627" value={confirmPassword} onChangeText={setConfirmPassword} secureTextEntry />
+      <FormField 
+        label="Confirm Password" 
+        placeholder="Gowa020627" 
+        value={confirmPassword} 
+        onChangeText={(text: string) => {
+          setConfirmPassword(text);
+          setConfirmPasswordError("");
+        }}
+        secureTextEntry 
+        error={confirmPasswordError}
+      />
 
       <View style={shared.buttonWrap}>
         <CustomButton title={isLoading ? "Signing Up..." : "Sign Up"} onPress={submit} fullWidth disabled={isLoading} />
       </View>
 
       <SignupFooter />
+
+      <Toast
+        visible={toastVisible}
+        message={toastMessage}
+        type={toastType}
+        onDismiss={() => setToastVisible(false)}
+      />
     </View>
   );
 }
@@ -129,6 +216,13 @@ const localStyles = StyleSheet.create({
     marginBottom: 8,
     color: colors.primary,
     fontWeight: "600",
+  },
+  errorText: {
+    color: "#f44336",
+    fontSize: 12,
+    marginTop: -8,
+    marginBottom: 12,
+    marginLeft: 4,
   },
   rowCenter: {
     marginTop: 8,

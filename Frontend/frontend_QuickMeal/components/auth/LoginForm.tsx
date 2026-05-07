@@ -1,10 +1,10 @@
 import React, { useState } from "react";
-import { View, Text, TouchableOpacity } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
 
 import CustomInput from "@/components/ui/customInput";
 import CustomButton from "@/components/ui/customButton";
-import { shared } from "@/components/ui/styles";
+import { shared, colors } from "@/components/ui/styles";
 
 export default function LoginForm({
   onLogin,
@@ -14,12 +14,15 @@ export default function LoginForm({
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [passwordError, setPasswordError] = useState("");
 
   const router = useRouter();
 
   async function submit() {
 
     try {
+      // Clear previous errors
+      setPasswordError("");
 
       const response = await fetch(
         "http://192.168.0.194:8000/api/auth/login",
@@ -44,9 +47,7 @@ export default function LoginForm({
 
       // LOGIN FAILED
       if (!response.ok) {
-
-        alert(data.message || "Login failed");
-
+        setPasswordError("Invalid email or password");
         return;
       }
 
@@ -67,7 +68,7 @@ export default function LoginForm({
 
       console.log("LOGIN ERROR:", error);
 
-      alert("Could not connect to backend");
+      setPasswordError("Could not connect to backend");
     }
   }
 
@@ -79,7 +80,10 @@ export default function LoginForm({
       <CustomInput
         placeholder="example@gmail.com"
         value={email}
-        onChangeText={setEmail}
+        onChangeText={(text) => {
+          setEmail(text);
+          setPasswordError("");
+        }}
       />
 
       <Text style={shared.label}>Password</Text>
@@ -87,9 +91,13 @@ export default function LoginForm({
       <CustomInput
         placeholder="Password"
         value={password}
-        onChangeText={setPassword}
+        onChangeText={(text) => {
+          setPassword(text);
+          setPasswordError("");
+        }}
         secureTextEntry
       />
+      {passwordError ? <Text style={styles.errorText}>{passwordError}</Text> : null}
 
       <View style={shared.buttonWrap}>
         <CustomButton
@@ -119,3 +127,13 @@ export default function LoginForm({
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  errorText: {
+    color: "#f44336",
+    fontSize: 12,
+    marginTop: -8,
+    marginBottom: 12,
+    marginLeft: 4,
+  },
+});

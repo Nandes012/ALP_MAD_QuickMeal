@@ -116,10 +116,33 @@ class UserController extends Controller
 
     /**
      * GET /api/users
-     * Get ALL users with all columns
+     * Get ALL users, or get authenticated user if ?me=true parameter is provided
      */
-    public function index()
+    public function index(Request $request)
     {
+        // If requesting current authenticated user
+        if ($request->query('me')) {
+            $user = $request->user();
+
+            if (!$user) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthenticated'
+                ], 401);
+            }
+
+            $user = User::with([
+                'orders',
+                'recommendations',
+                'subscriptions'
+            ])->find($user->id);
+
+            return response()->json([
+                'success' => true,
+                'data' => $user
+            ], 200);
+        }
+
         $users = User::all();
 
         return response()->json([
