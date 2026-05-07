@@ -10,23 +10,23 @@ class SubscriptionHistory extends Model
     protected $table = 'subscription_history';
 
     protected $fillable = [
-        'userId',
-        'startDate',
-        'endDate',
+        'user_id',
+        'start_date',
+        'end_date',
         'status',
-        'previousStatus',
-        'changeReason',
+        'previous_status',
+        'change_reason',
     ];
 
     protected $casts = [
-        'startDate' => 'date',
-        'endDate' => 'date',
+        'start_date' => 'date',
+        'end_date' => 'date',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];
 
     public function user(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'userId');
+        return $this->belongsTo(User::class, 'user_id');
     }
 }

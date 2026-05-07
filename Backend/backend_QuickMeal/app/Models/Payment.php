@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Payment extends Model
 {
-    protected $fillable = ['subscriptionId', 'method', 'amount', 'status'];
+    protected $fillable = ['subscription_id', 'method', 'amount', 'status'];
 
     public function subscription(): BelongsTo
     {
@@ -17,6 +17,6 @@ class Payment extends Model
 
     public function paymentHistory(): HasMany
     {
-        return $this->hasMany(PaymentHistory::class, 'subscriptionId', 'subscriptionId');
+        return $this->hasMany(PaymentHistory::class, 'subscription_id', 'subscription_id');
     }
 }

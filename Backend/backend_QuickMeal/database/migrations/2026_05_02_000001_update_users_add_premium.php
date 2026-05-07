@@ -11,9 +11,9 @@ return new class extends Migration
     {
         // If the users table already exists, add the column only when missing.
         if (Schema::hasTable('users')) {
-            if (!Schema::hasColumn('users', 'isPremium')) {
+            if (!Schema::hasColumn('users', 'is_premium')) {
                 Schema::table('users', function (Blueprint $table) {
-                    $table->boolean('isPremium')->default(false)->after('password');
+                    $table->boolean('is_premium')->default(false)->after('password');
                 });
             }
             return;
@@ -24,10 +24,10 @@ return new class extends Migration
             $table->id();
             $table->string('name');
             $table->string('email')->unique();
-            $table->timestamp('emailVerifiedAt')->nullable();
+            $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
-            $table->boolean('isPremium')->default(false);
-            $table->string('rememberToken')->nullable();
+            $table->boolean('is_premium')->default(false);
+            $table->string('remember_token')->nullable();
             $table->timestamps();
         });
     }
@@ -35,9 +35,9 @@ return new class extends Migration
 
     public function down(): void
     {
-        if (Schema::hasTable('users') && Schema::hasColumn('users', 'isPremium')) {
+        if (Schema::hasTable('users') && Schema::hasColumn('users', 'is_premium')) {
             Schema::table('users', function (Blueprint $table) {
-                $table->dropColumn('isPremium');
+                $table->dropColumn('is_premium');
             });
         }
     }
