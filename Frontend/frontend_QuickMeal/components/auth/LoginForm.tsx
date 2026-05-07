@@ -48,7 +48,7 @@ export default function LoginForm({
       // LOGIN FAILED
       if (!response.ok) {
 
-        setPasswordError("Invalid email or password");
+        setPasswordError("Email atau password tidak valid");
 
         return;
       }
@@ -70,7 +70,7 @@ export default function LoginForm({
 
       console.log("LOGIN ERROR:", error);
 
-      setPasswordError("Could not connect to backend");
+      setPasswordError("Tidak bisa terhubung ke server");
     }
   }
 

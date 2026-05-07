@@ -52,14 +52,14 @@ export default function SignupForm({ onSignup }: { onSignup?: (data: any) => voi
     clearErrors();
 
     if (!name || !email || !password || !confirmPassword) {
-      if (!name) setNameError("Name is required");
-      if (!email) setEmailError("Email is required");
-      if (!password) setPasswordError("Password is required");
-      if (!confirmPassword) setConfirmPasswordError("Confirm password is required");
+      if (!name) setNameError("Nama harus diisi");
+      if (!email) setEmailError("Email harus diisi");
+      if (!password) setPasswordError("Password harus diisi");
+      if (!confirmPassword) setConfirmPasswordError("Konfirmasi password harus diisi");
       return;
     }
     if (password !== confirmPassword) {
-      setConfirmPasswordError("Passwords do not match");
+      setConfirmPasswordError("Password tidak cocok");
       return;
     }
 
@@ -96,7 +96,7 @@ export default function SignupForm({ onSignup }: { onSignup?: (data: any) => voi
             setNameError(data.errors.name[0]);
           }
           if (data.errors.email) {
-            setEmailError("Invalid email or password");
+            setEmailError("Email atau password tidak valid");
           }
           if (data.errors.password) {
             setPasswordError(data.errors.password[0]);
@@ -122,7 +122,7 @@ export default function SignupForm({ onSignup }: { onSignup?: (data: any) => voi
 
     } catch (error) {
       console.log("SIGNUP ERROR:", error);
-      setEmailError("Could not connect to backend");
+      setEmailError("Tidak bisa terhubung ke server");
       setIsLoading(false);
     }
   }
