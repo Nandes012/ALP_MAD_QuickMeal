@@ -1,48 +1,121 @@
 import React, { useState } from "react";
-import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import { View, Text, TouchableOpacity } from "react-native";
 import { useRouter } from "expo-router";
+
 import CustomInput from "@/components/ui/customInput";
 import CustomButton from "@/components/ui/customButton";
 import { shared } from "@/components/ui/styles";
 
-export default function LoginForm({ onLogin }: { onLogin?: (u: string, p: string) => void }) {
-  const [username, setUsername] = useState("");
+export default function LoginForm({
+  onLogin,
+}: {
+  onLogin?: (u: string, p: string) => void;
+}) {
+
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+
   const router = useRouter();
 
-  function submit() {
-    // accept any username/password (no strict validation in dev)
-    if (onLogin) onLogin(username, password);
-    else console.log("Login attempt", { username, password });
+  async function submit() {
 
-    // navigate to app home (replace so back doesn't return to login)
-    // use the tabs root so user lands on the main Home tab
-    router.replace('/(tabs)');
+    try {
+
+      const response = await fetch(
+        "http://192.168.0.194:8000/api/auth/login",
+        {
+          method: "POST",
+
+          headers: {
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+          },
+
+          body: JSON.stringify({
+            email,
+            password,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      console.log("LOGIN RESPONSE:", data);
+
+      // LOGIN FAILED
+      if (!response.ok) {
+
+        alert(data.message || "Login failed");
+
+        return;
+      }
+
+      // OPTIONAL CALLBACK
+      if (onLogin) {
+        onLogin(email, password);
+      }
+
+      // SUCCESS
+      console.log("TOKEN:", data.token);
+
+      console.log("USER:", data.user);
+
+      // Navigate to home
+      router.replace("/(tabs)");
+
+    } catch (error) {
+
+      console.log("LOGIN ERROR:", error);
+
+      alert("Could not connect to backend");
+    }
   }
 
   return (
     <View style={shared.form}>
-      <Text style={shared.label}>Username</Text>
-      <CustomInput placeholder="St mutmainnah" value={username} onChangeText={setUsername} />
+
+      <Text style={shared.label}>Email</Text>
+
+      <CustomInput
+        placeholder="example@gmail.com"
+        value={email}
+        onChangeText={setEmail}
+      />
 
       <Text style={shared.label}>Password</Text>
-      <CustomInput placeholder="Password" value={password} onChangeText={setPassword} secureTextEntry />
+
+      <CustomInput
+        placeholder="Password"
+        value={password}
+        onChangeText={setPassword}
+        secureTextEntry
+      />
 
       <View style={shared.buttonWrap}>
-        <CustomButton title="Login" onPress={submit} fullWidth />
+        <CustomButton
+          title="Login"
+          onPress={submit}
+          fullWidth
+        />
       </View>
 
       <View style={shared.row}>
+
         <TouchableOpacity>
-          <Text style={shared.link}>Forgot Password?</Text>
+          <Text style={shared.link}>
+            Forgot Password?
+          </Text>
         </TouchableOpacity>
 
-        <TouchableOpacity onPress={() => router.push("/signup") }>
-          <Text style={shared.link}>Sign Up</Text>
+        <TouchableOpacity
+          onPress={() => router.push("/signup")}
+        >
+          <Text style={shared.link}>
+            Sign Up
+          </Text>
         </TouchableOpacity>
+
       </View>
     </View>
   );
 }
-
-// styles moved to shared styles

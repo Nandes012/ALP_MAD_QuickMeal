@@ -1,8 +1,9 @@
 import React, { useState } from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import { useRouter } from "expo-router";
 import CustomInput from "@/components/ui/customInput";
 import CustomButton from "@/components/ui/customButton";
-import { shared } from "@/components/ui/styles";
+import { shared, colors } from "@/components/ui/styles";
 
 // Consolidated small components inside this file for simpler structure
 function FormField({ label, ...inputProps }: any) {
@@ -13,9 +14,6 @@ function FormField({ label, ...inputProps }: any) {
     </View>
   );
 }
-
-import { useRouter } from "expo-router";
-import { colors } from "@/components/ui/styles";
 
 function SignupFooter() {
   const router = useRouter();
@@ -34,20 +32,71 @@ export default function SignupForm({ onSignup }: { onSignup?: (data: any) => voi
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
-  function submit() {
+  const router = useRouter();
+
+  async function submit() {
     if (!name || !email || !password || !confirmPassword) {
-      console.warn("Please fill all fields");
+      alert("Please fill all fields");
       return;
     }
     if (password !== confirmPassword) {
-      console.warn("Passwords do not match");
+      alert("Passwords do not match");
       return;
     }
 
-    const payload = { name, email, password };
-    if (onSignup) onSignup(payload);
-    else console.log("Signup payload", payload);
+    setIsLoading(true);
+
+    try {
+      const response = await fetch(
+      //jika ini tidak berkerja maka ganti ip address dengan ipnya kalian
+        "http://192.168.0.194:8000/api/auth/register",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+          },
+          body: JSON.stringify({
+            name,
+            email,
+            password,
+            password_confirmation: confirmPassword,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      console.log("SIGNUP RESPONSE:", data);
+
+      // SIGNUP FAILED
+      if (!response.ok) {
+        alert(data.message || "Sign up failed");
+        setIsLoading(false);
+        return;
+      }
+
+      // OPTIONAL CALLBACK
+      if (onSignup) {
+        onSignup({ name, email, password });
+      }
+
+      // SUCCESS
+      console.log("TOKEN:", data.token);
+      console.log("USER:", data.user);
+
+      setIsLoading(false);
+
+      // Navigate to home
+      router.replace("/(tabs)");
+
+    } catch (error) {
+      console.log("SIGNUP ERROR:", error);
+      alert("Could not connect to backend");
+      setIsLoading(false);
+    }
   }
 
   return (
@@ -62,7 +111,7 @@ export default function SignupForm({ onSignup }: { onSignup?: (data: any) => voi
       <FormField label="Confirm Password" placeholder="Gowa020627" value={confirmPassword} onChangeText={setConfirmPassword} secureTextEntry />
 
       <View style={shared.buttonWrap}>
-        <CustomButton title="Sign Up" onPress={submit} fullWidth />
+        <CustomButton title={isLoading ? "Signing Up..." : "Sign Up"} onPress={submit} fullWidth disabled={isLoading} />
       </View>
 
       <SignupFooter />

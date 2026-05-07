@@ -23,7 +23,7 @@ class UserController extends Controller
                 'regex:/^[A-Za-z0-9._%+-]+@gmail\.com$/'
             ],
 
-            'password' => 'required|string|min:8',
+            'password' => 'required|string|min:8|confirmed',
         ]);
 
         // Lowercase email
@@ -116,19 +116,22 @@ class UserController extends Controller
 
     /**
      * GET /api/users
+     * Get ALL users with all columns
      */
     public function index()
     {
-        $users = User::paginate(10);
+        $users = User::all();
 
         return response()->json([
             'success' => true,
+            'count' => $users->count(),
             'data' => $users
         ], 200);
     }
 
     /**
      * GET /api/users/{id}
+     * Get single user
      */
     public function show($id)
     {
@@ -146,6 +149,7 @@ class UserController extends Controller
 
     /**
      * PUT /api/user
+     * Update current logged-in user
      */
     public function update(Request $request)
     {
