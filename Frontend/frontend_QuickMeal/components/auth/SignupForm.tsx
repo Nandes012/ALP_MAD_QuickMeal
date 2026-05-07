@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet, Platform } from "react-native";
+import Constants from "expo-constants";
 import { useRouter } from "expo-router";
 import CustomInput from "@/components/ui/customInput";
 import CustomButton from "@/components/ui/customButton";
@@ -28,7 +29,7 @@ function SignupFooter() {
   );
 }
 
-export default function SignupForm({ onSignup }: { onSignup?: (data: any) => void }) {
+export default function SignupForm({ onSignup }: Readonly<{ onSignup?: (data: any) => void }>) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -66,25 +67,43 @@ export default function SignupForm({ onSignup }: { onSignup?: (data: any) => voi
     setIsLoading(true);
 
     try {
-      const response = await fetch(
-      //jika ini tidak berkerja maka ganti ip address dengan ipnya kalian
-        "http://192.168.0.194:8000/api/auth/register",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Accept": "application/json",
-          },
-          body: JSON.stringify({
-            name,
-            email,
-            password,
-            password_confirmation: confirmPassword,
-          }),
-        }
-      );
+      const getApiHost = () => {
+        if (Platform.OS === "web") return "http://localhost:8000";
+        const expoConfig = (Constants as any).expoConfig || {};
+        const hostUri = expoConfig?.hostUri || "";
+        const hostFromUri = hostUri ? hostUri.split(":")[0] : null;
+        const fallbackHost = "192.168.18.28"; // replace if needed
+        const host = hostFromUri || fallbackHost;
+        return `http://${host}:8000`;
+      };
 
-      const data = await response.json();
+      const url = `${getApiHost()}/api/auth/register`;
+
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+        },
+        body: JSON.stringify({
+          name,
+          email,
+          password,
+          password_confirmation: confirmPassword,
+        }),
+      });
+
+      const contentType = response.headers.get("content-type") || "";
+      let data: any = null;
+      if (contentType.includes("application/json")) {
+        data = await response.json();
+      } else {
+        const text = await response.text();
+        console.log("SIGNUP NON-JSON RESPONSE:", response.status, text);
+        setEmailError(`Server error: ${response.status}`);
+        setIsLoading(false);
+        return;
+      }
 
       console.log("SIGNUP RESPONSE:", data);
 
