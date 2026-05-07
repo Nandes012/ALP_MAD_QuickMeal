@@ -9,14 +9,14 @@ return new class extends Migration
 
     public function up(): void
     {
-        Schema::create('subscriptionhistory', function (Blueprint $table) {
+        Schema::create('subscription_history', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('userId')->constrained('users')->onDelete('cascade');
-            $table->date('startDate');
-            $table->date('endDate');
+            $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
+            $table->date('start_date');
+            $table->date('end_date');
             $table->string('status'); // active, expired, cancelled, paused, etc
-            $table->string('previousStatus')->nullable(); // previous status before this change
-            $table->string('changeReason')->nullable(); // reason for the change
+            $table->string('previous_status')->nullable(); // previous status before this change
+            $table->string('change_reason')->nullable(); // reason for the change
             $table->timestamps();
         });
     }

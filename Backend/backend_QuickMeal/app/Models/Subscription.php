@@ -8,11 +8,11 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Subscription extends Model
 {
-    protected $fillable = ['userId', 'startDate', 'endDate', 'status'];
+    protected $fillable = ['user_id', 'start_date', 'end_date', 'status'];
 
     protected $casts = [
-        'startDate' => 'date',
-        'endDate' => 'date',
+        'start_date' => 'date',
+        'end_date' => 'date',
     ];
 
     public function user(): BelongsTo
@@ -27,6 +27,6 @@ class Subscription extends Model
 
     public function subscriptionHistory(): HasMany
     {
-        return $this->hasMany(SubscriptionHistory::class, 'userId', 'userId');
+        return $this->hasMany(SubscriptionHistory::class, 'user_id', 'user_id');
     }
 }
