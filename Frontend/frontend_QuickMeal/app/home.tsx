@@ -3,7 +3,6 @@ import { SafeAreaView, ScrollView, View, Text, Image, FlatList, StyleSheet } fro
 import HeaderBar from "../components/home/HeaderBar";
 import Banner from "../components/home/Banner";
 import FoodList from "../components/home/FoodList";
-import BottomNav from "../components/home/BottomNav";
 import FoodCard from "../components/ui/FoodCard";
 import { colors } from "../components/ui/styles";
 
@@ -44,7 +43,7 @@ export default function Home() {
         <View style={{ height: 120 }} />
       </ScrollView>
 
-      <BottomNav />
+      {/* BottomNav removed — use Tabs layout's tab bar to avoid duplicate nav */}
     </SafeAreaView>
   );
 }
