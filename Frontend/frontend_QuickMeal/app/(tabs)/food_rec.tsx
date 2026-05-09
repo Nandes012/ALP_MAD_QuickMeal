@@ -1,11 +1,15 @@
 import React from 'react';
 import { StyleSheet, Text, View, ImageBackground, TouchableOpacity, Image } from 'react-native';
+import { useRouter } from 'expo-router';
 
 export default function FoodRecScreen() {
+  const router = useRouter();
+
   return (
     <View style={styles.container}>
       <ImageBackground 
-
+        // @ts-ignore: `pointerEvents` is applied at runtime to the underlying view
+        pointerEvents="none"
         source={require('../../assets/images/kue.png')}
         style={styles.background}
       >
@@ -18,7 +22,7 @@ export default function FoodRecScreen() {
           </View>
 
           <View style={styles.buttonGroup}>
-            <TouchableOpacity style={styles.mainButton}>
+            <TouchableOpacity style={styles.mainButton} onPress={() => router.push('/from_resep')}>
               <Text style={styles.buttonText}>Resep</Text>
             </TouchableOpacity>
 
@@ -60,6 +64,7 @@ const styles = StyleSheet.create({
   buttonGroup: {
     width: '80%',
     alignItems: 'center',
+    zIndex: 10,
   },
   mainButton: {
     backgroundColor: '#9E5F3B',

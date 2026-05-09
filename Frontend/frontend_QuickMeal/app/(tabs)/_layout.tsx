@@ -7,12 +7,10 @@ export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        // Warna icon saat aktif (putih) dan tidak aktif (cokelat muda)
         tabBarActiveTintColor: '#FFFFFF',
         tabBarInactiveTintColor: '#D2B48C',
-        // Style untuk bar tab bawah
         tabBarStyle: {
-          backgroundColor: '#9E5F3B', // Warna cokelat utama
+          backgroundColor: '#9E5F3B', 
           borderTopWidth: 0,
           height: Platform.OS === 'ios' ? 90 : 70,
           paddingBottom: Platform.OS === 'ios' ? 30 : 10,
@@ -24,7 +22,7 @@ export default function TabLayout() {
         headerShown: false,
       }}>
       
-      {/* 1. Halaman Home (index.tsx) */}
+      {/* 1. Halaman Home */}
       <Tabs.Screen
         name="index"
         options={{
@@ -33,24 +31,24 @@ export default function TabLayout() {
         }}
       />
 
-      {/* 2. Tombol Tengah (food_rec.tsx) - Dibuat menonjol */}
+      {/* 2. Tombol Tengah (Get Food Rec) */}
       <Tabs.Screen
         name="food_rec"
         options={{
           title: 'Get Food Rec',
           tabBarIcon: ({ focused }) => (
             <View style={{
-              backgroundColor: '#8D5B3E', // Cokelat lebih gelap
+              backgroundColor: '#8D5B3E', 
               width: 60,
               height: 60,
               borderRadius: 30,
               justifyContent: 'center',
               alignItems: 'center',
-              bottom: 20, // Membuat efek melayang ke atas
+              bottom: 20, 
               borderWidth: 4,
-              borderColor: '#FCF8F5', // Warna krem/putih tulang agar kontras
-              elevation: 5, // Shadow untuk Android
-              shadowColor: '#000', // Shadow untuk iOS
+              borderColor: '#FCF8F5', 
+              elevation: 5,
+              shadowColor: '#000',
               shadowOffset: { width: 0, height: 2 },
               shadowOpacity: 0.3,
               shadowRadius: 3,
@@ -61,7 +59,7 @@ export default function TabLayout() {
         }}
       />
 
-      {/* 3. Halaman List (explore.tsx) */}
+      {/* 3. Halaman List */}
       <Tabs.Screen
         name="explore"
         options={{
@@ -69,6 +67,32 @@ export default function TabLayout() {
           tabBarIcon: ({ color }) => <Ionicons name="clipboard-outline" size={24} color={color} />,
         }}
       />
+
+      {/* --- TAMBAHAN BARU: AGAR HALAMAN RESEP QUIZ BISA DIAKSES --- */}
+      <Tabs.Screen
+        name="resep_quiz"
+        options={{
+          href: null, // Menghilangkan tab ini dari menu bawah agar tetap rapi
+          headerShown: false,
+        }}
+      />
+
+      <Tabs.Screen
+  name="from_resep"
+  options={{
+    href: null, // Sembunyikan dari bar bawah
+    headerShown: false,
+  }}
+/>
+
+<Tabs.Screen
+  name="hasil_rec_resep"
+  options={{
+    href: null, // Sembunyikan dari bar bawah
+    headerShown: false,
+  }}
+/>
+      
     </Tabs>
   );
 }
