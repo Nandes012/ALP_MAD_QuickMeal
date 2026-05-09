@@ -2,7 +2,7 @@ import React from "react";
 import { SafeAreaView, View, Text, Image, TouchableOpacity, StyleSheet, ScrollView } from "react-native";
 import { useRouter } from "expo-router";
 import { colors } from "@/components/ui/styles";
-import BottomNav from "../components/home/BottomNav";
+// Removed local BottomNav import: bottom tabs are provided by the app's Tabs layout
 
 export const options = {
   headerShown: false,
@@ -55,7 +55,7 @@ export default function Profile() {
 
       </ScrollView>
 
-      <BottomNav />
+      {/* BottomNav removed — Tabs layout renders the bottom tab bar */}
     </SafeAreaView>
   );
 }

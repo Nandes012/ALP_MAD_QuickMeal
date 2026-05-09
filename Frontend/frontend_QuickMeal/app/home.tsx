@@ -3,7 +3,7 @@ import { SafeAreaView, ScrollView, View, Text, Image, FlatList, StyleSheet } fro
 import HeaderBar from "../components/home/HeaderBar";
 import Banner from "../components/home/Banner";
 import FoodList from "../components/home/FoodList";
-import BottomNav from "../components/home/BottomNav";
+// BottomNav removed: tab bar is provided by `app/(tabs)/_layout.tsx` to avoid duplicates
 import FoodCard from "../components/ui/FoodCard";
 import { colors } from "../components/ui/styles";
 
@@ -44,7 +44,7 @@ export default function Home() {
         <View style={{ height: 120 }} />
       </ScrollView>
 
-      <BottomNav />
+      {/* BottomNav removed — Tabs layout renders the bottom tab bar */}
     </SafeAreaView>
   );
 }
