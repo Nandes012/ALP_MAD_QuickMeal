@@ -2,9 +2,15 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\RecipeController;
 
 Route::post('/auth/register', [UserController::class, 'register']);
 Route::post('/auth/login', [UserController::class, 'login']);
+
+// Public recipe routes
+Route::get('/recipes/popular', [RecipeController::class, 'getPopularRecipes']);
+Route::get('/recipes', [RecipeController::class, 'index']);
+Route::get('/recipes/{id}', [RecipeController::class, 'show']);
 
 Route::middleware('auth:sanctum')->group(function () {
 
