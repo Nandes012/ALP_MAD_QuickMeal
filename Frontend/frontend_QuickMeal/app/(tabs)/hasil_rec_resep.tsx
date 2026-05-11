@@ -63,7 +63,7 @@ export default function HasilRecResepScreen() {
         <Text style={styles.cardTitle}>{item.title}</Text>
         {item.menu && <Text style={styles.cardMenu}>{item.menu}</Text>}
         <View style={styles.cardRow}>
-          <Text style={styles.cardPrice}>$ Rp. {item.price}</Text>
+          <Text style={styles.cardPrice}>Rp. {item.price}</Text>
           <View style={styles.timeRow}>
             <Ionicons name="time-outline" size={14} color="white" />
             <Text style={styles.cardTime}>{item.time}</Text>
