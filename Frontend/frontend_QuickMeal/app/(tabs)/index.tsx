@@ -1,5 +1,5 @@
-import React from 'react';
-import { StyleSheet, Text, View, Image, TouchableOpacity, ScrollView, Platform } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { StyleSheet, Text, View, Image, TouchableOpacity, ScrollView, Platform, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -15,21 +15,61 @@ interface FoodItem {
   imageUri: string;
 }
 
-const POPULAR_FOOD: FoodItem[] = [
-  { id: '1', name: 'Ayam Goreng', rating: '4.9', desc: 'Kelezatan bumbu rempah yang meresap hingga ke tulang.', imageUri: 'https://images.unsplash.com/photo-1626082927389-6cd097cdc6ec?q=80&w=500&auto=format&fit=crop' },
-  { id: '2', name: 'Ayam Bakar', rating: '4.8', desc: 'Sentuhan kecap manis dan aroma bakaran yang menggoda.', imageUri: 'https://images.unsplash.com/photo-1598515214211-89d3c73ae83b?q=80&w=500&auto=format&fit=crop' },
-  { id: '3', name: 'Nasi Goreng', rating: '4.9', desc: 'Nasi goreng spesial dengan topping telur dan acar segar.', imageUri: 'https://images.unsplash.com/photo-1603133872878-684f208fb84b?q=80&w=500&auto=format&fit=crop' },
-  { id: '4', name: 'Nasi Kuning', rating: '4.7', desc: 'Gurihnya santan dipadu dengan lauk lengkap khas nusantara.', imageUri: 'https://i.pinimg.com/736x/15/67/4c/15674cf0afcc0d0aa09b01840eec90af.jpg' },
-  { id: '5', name: 'Sate Ayam', rating: '4.9', desc: 'Potongan daging empuk dengan siraman saus kacang kental.', imageUri: 'https://i.pinimg.com/736x/a6/8e/c5/a68ec592ddcfad79a8480821a5ab6320.jpg' },
-];
+type RecipeApiItem = {
+  id: string | number;
+  title: string;
+  subtitle?: string | null;
+  image?: string | null;
+  cookingTime?: number | null;
+  difficulty?: string | null;
+};
+
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000/api';
 
 export default function HomeScreen() {
   const router = useRouter();
+  const [popularFood, setPopularFood] = useState<FoodItem[]>([]);
+  const [loading, setLoading] = useState(true);
 
   // --- MEMUAT FONT ---
   const [fontsLoaded] = useFonts({
     'Langar-Regular': Langar_400Regular,
   });
+
+  useEffect(() => {
+    const fetchPopularFood = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/recipes/popular`);
+
+        if (!response.ok) {
+          throw new Error(`API error: ${response.status}`);
+        }
+
+        const result = await response.json();
+
+        if (result?.success && Array.isArray(result.data)) {
+          const mappedFood = result.data.map((recipe: RecipeApiItem) => ({
+            id: String(recipe.id),
+            name: recipe.title,
+            rating: recipe.cookingTime ? `${recipe.cookingTime}m` : recipe.difficulty || 'Populer',
+            desc: recipe.subtitle || 'Resep populer hari ini.',
+            imageUri: recipe.image || 'https://via.placeholder.com/500',
+          }));
+
+          setPopularFood(mappedFood);
+        } else {
+          setPopularFood([]);
+        }
+      } catch (error) {
+        console.error('Failed to fetch popular recipes:', error);
+        setPopularFood([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPopularFood();
+  }, []);
 
   if (!fontsLoaded) {
     return null;
@@ -72,6 +112,25 @@ export default function HomeScreen() {
     </TouchableOpacity>
   );
 
+  let popularFoodContent: React.ReactNode;
+
+  if (loading) {
+    popularFoodContent = (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#9E5F3B" />
+        <Text style={styles.loadingText}>Memuat makanan populer...</Text>
+      </View>
+    );
+  } else if (popularFood.length === 0) {
+    popularFoodContent = (
+      <View style={styles.emptyContainer}>
+        <Text style={styles.emptyText}>Belum ada makanan populer untuk ditampilkan.</Text>
+      </View>
+    );
+  } else {
+    popularFoodContent = popularFood.map((item) => renderFoodCard(item));
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
@@ -106,7 +165,7 @@ export default function HomeScreen() {
         </View>
 
         <View style={styles.listContainer}>
-          {POPULAR_FOOD.map((item) => renderFoodCard(item))}
+          {popularFoodContent}
         </View>
         
         <View style={{ height: 120 }} />
@@ -155,6 +214,28 @@ const styles = StyleSheet.create({
     fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif' 
   },
   listContainer: { paddingHorizontal: 20 },
+  loadingContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 24,
+  },
+  loadingText: {
+    marginTop: 10,
+    color: '#9E5F3B',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  emptyContainer: {
+    paddingVertical: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyText: {
+    color: '#9E5F3B',
+    fontSize: 14,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
   card: {
     backgroundColor: '#9E5F3B',
     borderRadius: 25,
