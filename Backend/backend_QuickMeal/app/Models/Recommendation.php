@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Recommendation extends Model
 {
-    protected $fillable = ['userId', 'type'];
+    protected $fillable = ['user_id', 'type'];
 
     public function user(): BelongsTo
     {

@@ -10,12 +10,12 @@ class PaymentHistory extends Model
     protected $table = 'payment_history';
 
     protected $fillable = [
-        'subscriptionId',
+        'subscription_id',
         'method',
         'amount',
         'status',
-        'previousStatus',
-        'changeReason',
+        'previous_status',
+        'change_reason',
     ];
 
     protected $casts = [
@@ -26,6 +26,6 @@ class PaymentHistory extends Model
 
     public function subscription(): BelongsTo
     {
-        return $this->belongsTo(Subscription::class, 'subscriptionId');
+        return $this->belongsTo(Subscription::class, 'subscription_id');
     }
 }

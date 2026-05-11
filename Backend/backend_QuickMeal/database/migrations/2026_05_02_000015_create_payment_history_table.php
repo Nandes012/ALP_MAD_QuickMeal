@@ -9,14 +9,14 @@ return new class extends Migration
 
     public function up(): void
     {
-        Schema::create('paymenthistory', function (Blueprint $table) {
+        Schema::create('payment_history', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('subscriptionId')->constrained('subscriptions')->onDelete('cascade');
+            $table->foreignId('subscription_id')->constrained('subscriptions')->onDelete('cascade');
             $table->string('method'); // credit_card, debit_card, e_wallet, transfer, etc
             $table->decimal('amount', 10, 2);
             $table->string('status'); // pending, completed, failed
-            $table->string('previousStatus')->nullable(); // previous status before this change
-            $table->string('changeReason')->nullable(); // reason for the change (e.g., refund reason, failure reason)
+            $table->string('previous_status')->nullable(); // previous status before this change
+            $table->string('change_reason')->nullable(); // reason for the change (e.g., refund reason, failure reason)
             $table->timestamps();
         });
     }
