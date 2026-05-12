@@ -3,6 +3,7 @@ import { StyleSheet, Text, View, Image, TouchableOpacity, ScrollView, Platform, 
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import Constants from 'expo-constants';
 
 // --- IMPORT FONT LANGAR ---
 import { useFonts, Langar_400Regular } from '@expo-google-fonts/langar';
@@ -23,7 +24,17 @@ type RecipeApiItem = {
   difficulty?: string | null;
 };
 
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000/api';
+const getApiHost = () => {
+  if (Platform.OS === "web") return "http://localhost:8000";
+  const expoConfig = (Constants as any).expoConfig || {};
+  const hostUri = expoConfig?.hostUri || "";
+  const hostFromUri = hostUri ? hostUri.split(":")[0] : null;
+  const fallbackHost = "192.168.18.28";
+  const host = hostFromUri || fallbackHost;
+  return `http://${host}:8000`;
+};
+
+const API_BASE_URL = `${getApiHost()}/api`;
 
 export default function HomeScreen() {
   const router = useRouter();

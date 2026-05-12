@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, Image, TouchableOpacity, FlatList, StatusBar, ActivityIndicator } from 'react-native';
+import { StyleSheet, Text, View, Image, TouchableOpacity, FlatList, StatusBar, ActivityIndicator, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import Constants from 'expo-constants';
 
 // --- IMPORT FONT LANGAR ---
 import { useFonts, Langar_400Regular } from '@expo-google-fonts/langar';
@@ -18,7 +19,17 @@ interface FoodItem {
   time?: string; // Tambahkan opsional time untuk detail resep
 }
 
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000/api';
+const getApiHost = () => {
+  if (Platform.OS === "web") return "http://localhost:8000";
+  const expoConfig = (Constants as any).expoConfig || {};
+  const hostUri = expoConfig?.hostUri || "";
+  const hostFromUri = hostUri ? hostUri.split(":")[0] : null;
+  const fallbackHost = "192.168.18.28";
+  const host = hostFromUri || fallbackHost;
+  return `http://${host}:8000`;
+};
+
+const API_BASE_URL = `${getApiHost()}/api`;
 
 // Page state for fetched lists
 const useFetchList = (activeTab: 'Masak' | 'Order') => {
