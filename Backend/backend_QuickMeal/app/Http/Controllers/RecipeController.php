@@ -7,6 +7,21 @@ use Illuminate\Http\JsonResponse;
 
 class RecipeController extends Controller
 {
+    private function mapRecipe($recipe): array
+    {
+        $totalIngredientPrice = (float) ($recipe->ingredients->sum('price_estimate') ?? 0);
+
+        return [
+            'id' => (string) $recipe->id,
+            'title' => $recipe->name,
+            'subtitle' => $recipe->description,
+            'image' => $recipe->imageUrl,
+            'cookingTime' => $recipe->cookingTime,
+            'difficulty' => $recipe->difficulty,
+            'totalIngredientPrice' => $totalIngredientPrice,
+        ];
+    }
+
     /**
      * Get popular recipes for today (randomized daily)
      * The randomization is seeded with the current date, so the same recipes
@@ -38,19 +53,13 @@ class RecipeController extends Controller
             // Get 12 random recipes (or fewer if not enough exist)
             $limit = min(12, $totalRecipes);
             
-            $recipes = Recipe::all()
+            $recipes = Recipe::with('ingredients')
+                ->get()
                 ->shuffle()
                 ->take($limit)
                 ->values()
                 ->map(function ($recipe) {
-                    return [
-                        'id' => (string) $recipe->id,
-                        'title' => $recipe->name,
-                        'subtitle' => $recipe->description,
-                        'image' => $recipe->imageUrl,
-                        'cookingTime' => $recipe->cookingTime,
-                        'difficulty' => $recipe->difficulty,
-                    ];
+                    return $this->mapRecipe($recipe);
                 });
             
             return response()->json([
@@ -71,15 +80,8 @@ class RecipeController extends Controller
     public function index(): JsonResponse
     {
         try {
-            $recipes = Recipe::all()->map(function ($recipe) {
-                return [
-                    'id' => (string) $recipe->id,
-                    'title' => $recipe->name,
-                    'subtitle' => $recipe->description,
-                    'image' => $recipe->imageUrl,
-                    'cookingTime' => $recipe->cookingTime,
-                    'difficulty' => $recipe->difficulty,
-                ];
+            $recipes = Recipe::with('ingredients')->get()->map(function ($recipe) {
+                return $this->mapRecipe($recipe);
             });
 
             return response()->json([
@@ -100,7 +102,7 @@ class RecipeController extends Controller
     public function show($id): JsonResponse
     {
         try {
-            $recipe = Recipe::find($id);
+            $recipe = Recipe::with(['ingredients.ingredient', 'steps'])->find($id);
 
             if (!$recipe) {
                 return response()->json([
@@ -118,7 +120,16 @@ class RecipeController extends Controller
                     'image' => $recipe->imageUrl,
                     'cookingTime' => $recipe->cookingTime,
                     'difficulty' => $recipe->difficulty,
-                    'ingredients' => $recipe->ingredients,
+                    'totalIngredientPrice' => (float) ($recipe->ingredients->sum('price_estimate') ?? 0),
+                    'ingredients' => $recipe->ingredients->map(function ($item) {
+                        return [
+                            'id' => (string) $item->id,
+                            'ingredient_id' => (string) $item->ingredient_id,
+                            'ingredient_name' => $item->ingredient?->name,
+                            'quantity' => $item->quantity,
+                            'price_estimate' => (float) $item->price_estimate,
+                        ];
+                    }),
                     'steps' => $recipe->steps,
                 ]
             ]);

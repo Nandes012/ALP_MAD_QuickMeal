@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, Image, TouchableOpacity, FlatList, StatusBar } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -13,24 +13,66 @@ interface FoodItem {
   rating?: string;
 }
 
-// --- DATA DUMMY ---
-const MASAK_DATA: FoodItem[] = [
-  { id: '1', name: 'Ayam Bakar', price: '25.000', image: 'https://i.pinimg.com/736x/11/a0/8f/11a08f16b0beaa1eefdb30583f1da8f6.jpg' },
-  { id: '2', name: 'Ayam Goreng', price: '28.000', image: 'https://i.pinimg.com/736x/02/06/01/020601302dedab7013734a652062966d.jpg' },
-  { id: '3', name: 'Burger Spaicy', price: '21.000', image: 'https://i.pinimg.com/736x/38/bb/96/38bb963a9c08bc4b4894b98b9d5ff32c.jpg' },
-  { id: '4', name: 'Spaghetti', price: '30.000', image: 'https://i.pinimg.com/1200x/0b/58/23/0b582305b2368e3f1e4e60a3f90da4b9.jpg' },
-];
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000/api';
 
-const ORDER_DATA: FoodItem[] = [
-  { id: 'o1', name: 'Ayam Bakar', price: '25.000', image: 'https://i.pinimg.com/736x/11/a0/8f/11a08f16b0beaa1eefdb30583f1da8f6.jpg', rating: '4.9' },
-  { id: 'o2', name: 'Ayam Goreng', price: '28.000', image: 'https://i.pinimg.com/736x/02/06/01/020601302dedab7013734a652062966d.jpg', rating: '4.9' },
-  { id: 'o3', name: 'Burger Spaicy', price: '21.000', image: 'https://i.pinimg.com/736x/38/bb/96/38bb963a9c08bc4b4894b98b9d5ff32c.jpg', rating: '4.9' },
-  { id: 'o4', name: 'Spaghetti', price: '30.000', image: 'https://i.pinimg.com/1200x/0b/58/23/0b582305b2368e3f1e4e60a3f90da4b9.jpg', rating: '4.9' },
-];
+// Helper to fetch recipes or orders based on active tab
+async function fetchList(activeTab: 'Masak' | 'Order') {
+  if (activeTab === 'Masak') {
+    const res = await fetch(`${API_BASE_URL}/recipes`);
+    if (!res.ok) throw new Error(`API error ${res.status}`);
+    const json = await res.json();
+    if (json?.success && Array.isArray(json.data)) {
+      return json.data.map((r: any) => ({
+        id: String(r.id),
+        name: r.title || r.name || 'Resep',
+        price: Number(r.totalIngredientPrice || 0).toLocaleString('id-ID'),
+        image: r.image || r.imageUrl || 'https://via.placeholder.com/300',
+        rating: r.cookingTime ? `${r.cookingTime}m` : undefined,
+      }));
+    }
+    return [];
+  }
+
+  // Order tab
+  const res = await fetch(`${API_BASE_URL}/orders`);
+  if (!res.ok) throw new Error(`API error ${res.status}`);
+  const json = await res.json();
+  if (json?.success && Array.isArray(json.data)) {
+    return json.data.map((o: any) => ({
+      id: String(o.id),
+      name: o.merchant_name || `Order #${o.id}`,
+      price: o.total_price || '0',
+      image: o.image || 'https://via.placeholder.com/300',
+      rating: '4.9',
+    }));
+  }
+  return [];
+}
 
 export default function ExploreScreen() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<'Masak' | 'Order'>('Masak');
+  const [data, setData] = useState<FoodItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let mounted = true;
+    const load = async () => {
+      setLoading(true);
+      try {
+        const list = await fetchList(activeTab);
+        if (mounted) setData(list);
+      } catch (err) {
+        console.error('Failed loading list:', err);
+        if (mounted) setData([]);
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    };
+
+    load();
+    return () => { mounted = false; };
+  }, [activeTab]);
 
   const renderFoodItem = ({ item }: { item: FoodItem }) => (
     <View style={styles.card}>
@@ -52,7 +94,11 @@ export default function ExploreScreen() {
             const path = activeTab === 'Masak' ? '/detail_resep' : '/detail_order';
             router.push({ 
                 pathname: path as any, 
-                params: { name: item.name, imageUrl: item.image, price: item.price } 
+                params: {
+                  name: item.name,
+                  imageUrl: item.image,
+                  price: item.price
+                } 
             });
           }}
         >
@@ -64,6 +110,31 @@ export default function ExploreScreen() {
       <Image source={{ uri: item.image }} style={styles.foodImage} />
     </View>
   );
+  let listContent: React.ReactNode;
+
+  if (loading) {
+    listContent = (
+      <View style={{ paddingVertical: 24, alignItems: 'center' }}>
+        <Text style={{ color: '#8D5B3E' }}>{activeTab === 'Masak' ? 'Memuat resep...' : 'Memuat order...'}</Text>
+      </View>
+    );
+  } else if (data.length === 0) {
+    listContent = (
+      <View style={{ paddingVertical: 24, alignItems: 'center' }}>
+        <Text style={{ color: '#8D5B3E' }}>Belum ada item untuk ditampilkan.</Text>
+      </View>
+    );
+  } else {
+    listContent = (
+      <FlatList
+        data={data}
+        renderItem={renderFoodItem}
+        keyExtractor={(item) => item.id}
+        contentContainerStyle={styles.listContent}
+        showsVerticalScrollIndicator={false}
+      />
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -107,13 +178,7 @@ export default function ExploreScreen() {
       </Text>
 
       {/* CONTENT LIST */}
-      <FlatList
-        data={activeTab === 'Masak' ? MASAK_DATA : ORDER_DATA}
-        renderItem={renderFoodItem}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.listContent}
-        showsVerticalScrollIndicator={false}
-      />
+      {listContent}
     </SafeAreaView>
   );
 }

@@ -51,13 +51,13 @@ export default function DetailOrderScreen() {
           </View>
         </View>
 
-        {/* Info Restoran - Menggunakan style Accordion agar seragam */}
+          {/* Info Restoran - Menggunakan style Accordion agar seragam */}
         <View style={styles.stepContainer}>
-          <Text style={styles.stepTitle}>Info Restoran</Text>
+           <Text style={styles.stepTitle}>Info Restoran</Text>
           
           <View style={styles.infoRow}>
              <Text style={styles.infoLabel}>Alamat</Text>
-             <Text style={styles.infoValue}>Jl. Bukit Tamarunang, Kec. Somba Opu, Kab. Gowa</Text>
+             <Text style={styles.infoValue}>Jl. Pengayoman, Kec. Panakkukang, Kota Makassar</Text>
           </View>
 
           <View style={styles.infoRow}>
@@ -67,18 +67,18 @@ export default function DetailOrderScreen() {
 
           <View style={styles.infoRow}>
              <Text style={styles.infoLabel}>Jam Buka</Text>
-             <Text style={styles.infoValue}>: 10:00 - 22:00 WIB</Text>
+             <Text style={styles.infoValue}>: 10:00 - 22:00 WITA</Text>
           </View>
 
-          {/* Map Image - Dibuat rapi di dalam container */}
-          <View style={styles.mapWrapper}>
+           {/* Map Image - Dibuat rapi di dalam container */}
+           <View style={styles.mapWrapper}>
              <Image 
-                source={{ uri: 'https://i.pinimg.com/1200x/2e/0a/78/2e0a789278de18b14b6716d8ac229677.jpg' }} 
-                style={styles.mapImage}
+               source={{ uri: 'https://i.pinimg.com/1200x/2e/0a/78/2e0a789278de18b14b6716d8ac229677.jpg' }} 
+               style={styles.mapImage}
              />
              <View style={styles.mapLabel}>
-                <Ionicons name="location" size={14} color="#9E5F3B" />
-                <Text style={styles.mapLabelText}>Lokasi Restoran</Text>
+               <Ionicons name="location" size={14} color="#9E5F3B" />
+               <Text style={styles.mapLabelText}>Lokasi Restoran (Makassar)</Text>
              </View>
           </View>
         </View>
@@ -90,22 +90,22 @@ export default function DetailOrderScreen() {
              <Text style={styles.priceText}>Harga Menu</Text>
              <Text style={styles.priceText}>: Rp. {price}</Text>
           </View>
-          <View style={styles.priceRow}>
+           <View style={styles.priceRow}>
              <Text style={styles.priceText}>Harga Ongkir</Text>
              <Text style={styles.priceText}>: Rp. 6.000</Text>
-          </View>
-          <View style={styles.divider} />
-          <View style={styles.priceRow}>
+           </View>
+           <View style={styles.divider} />
+           <View style={styles.priceRow}>
              <Text style={styles.totalText}>Total Pesanan</Text>
-             <Text style={styles.totalText}>: Rp. 31.000</Text>
-          </View>
+             <Text style={styles.totalText}>: Rp. {price}</Text>
+           </View>
         </View>
 
-        {/* Estimasi Pengiriman */}
+          {/* Estimasi Pengiriman */}
         <View style={[styles.stepContainer, { marginTop: 20 }]}>
-          <Text style={styles.stepTitle}>Estimasi Pengiriman</Text>
-          <Text style={styles.deliverySub}>Waktu tiba pesanan</Text>
-          <Text style={styles.deliveryTime}>30 - 45 Menit</Text>
+           <Text style={styles.stepTitle}>Estimasi Pengiriman</Text>
+           <Text style={styles.deliverySub}>Waktu tiba pesanan</Text>
+           <Text style={styles.deliveryTime}>30 - 45 Menit</Text>
         </View>
 
         <View style={{ height: 100 }} />
@@ -138,13 +138,13 @@ const styles = StyleSheet.create({
   infoRow: { marginBottom: 8 },
   infoLabel: { fontSize: 13, fontWeight: 'bold', color: '#5b2f20' },
   infoValue: { fontSize: 13, color: '#333', lineHeight: 18 },
-  
+
   // Map Styles
   mapWrapper: { marginTop: 15, borderRadius: 15, overflow: 'hidden', borderWidth: 1, borderColor: '#eee' },
   mapImage: { width: '100%', height: 120, backgroundColor: '#f0f0f0' },
   mapLabel: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', padding: 8, backgroundColor: '#F9F2ED' },
   mapLabelText: { fontSize: 11, fontWeight: 'bold', color: '#9E5F3B', marginLeft: 5 },
-
+  
   // Price Styles
   priceRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 5 },
   priceText: { fontSize: 13, color: '#333' },

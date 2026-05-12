@@ -10,7 +10,6 @@ import { useFonts, Langar_400Regular } from '@expo-google-fonts/langar';
 interface FoodItem {
   id: string;
   name: string;
-  rating: string;
   desc: string;
   imageUri: string;
 }
@@ -51,7 +50,6 @@ export default function HomeScreen() {
           const mappedFood = result.data.map((recipe: RecipeApiItem) => ({
             id: String(recipe.id),
             name: recipe.title,
-            rating: recipe.cookingTime ? `${recipe.cookingTime}m` : recipe.difficulty || 'Populer',
             desc: recipe.subtitle || 'Resep populer hari ini.',
             imageUri: recipe.image || 'https://via.placeholder.com/500',
           }));
@@ -82,26 +80,22 @@ export default function HomeScreen() {
       activeOpacity={0.9}
       // Tambahan: Klik area kartu juga bisa masuk ke detail
       onPress={() => router.push({
-        pathname: "/detail_order",
-        params: { name: item.name, rating: item.rating, image: item.imageUri }
+        pathname: "/detail_resep",
+        params: { name: item.name, image: item.imageUri }
       })}
     >
       <View style={styles.cardContent}>
         <View style={styles.textContainer}>
           <View style={styles.titleRow}>
             <Text style={styles.foodName}>{item.name}</Text>
-            <View style={styles.ratingContainer}>
-              <Ionicons name="star" size={16} color="#FFD700" />
-              <Text style={styles.ratingText}>{item.rating}</Text>
-            </View>
           </View>
           <Text style={styles.foodDesc} numberOfLines={2}>{item.desc}</Text>
           
           {/* PERUBAHAN DI SINI: Navigasi saat klik Lihat Detail */}
           <TouchableOpacity 
             onPress={() => router.push({
-              pathname: "/detail_order",
-              params: { name: item.name, rating: item.rating, image: item.imageUri }
+              pathname: "/detail_resep",
+              params: { name: item.name, image: item.imageUri }
             })}
           >
             <Text style={styles.detailText}>Lihat Detail</Text>
@@ -251,8 +245,6 @@ const styles = StyleSheet.create({
   textContainer: { flex: 1, paddingRight: 12 },
   titleRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 6 },
   foodName: { color: 'white', fontSize: 18, fontWeight: 'bold', marginRight: 10 },
-  ratingContainer: { flexDirection: 'row', alignItems: 'center' },
-  ratingText: { color: 'white', fontSize: 14, marginLeft: 4, fontWeight: '600' },
   foodDesc: { color: 'white', fontSize: 13, marginBottom: 10, opacity: 0.9, lineHeight: 18 },
   detailText: { color: 'white', fontSize: 13, textDecorationLine: 'underline', fontWeight: '500' },
   foodImage: { width: 90, height: 90, borderRadius: 15, backgroundColor: '#eee' },
