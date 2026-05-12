@@ -1,9 +1,9 @@
 import React, { useState } from "react";
-import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet, Platform } from "react-native";
+import Constants from "expo-constants";
 import { useRouter } from "expo-router";
 import CustomInput from "@/components/ui/customInput";
 import CustomButton from "@/components/ui/customButton";
-import Toast from "@/components/ui/Toast";
 import { shared, colors } from "@/components/ui/styles";
 
 // Consolidated small components inside this file for simpler structure
@@ -29,7 +29,7 @@ function SignupFooter() {
   );
 }
 
-export default function SignupForm({ onSignup }: { onSignup?: (data: any) => void }) {
+export default function SignupForm({ onSignup }: Readonly<{ onSignup?: (data: any) => void }>) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -39,17 +39,8 @@ export default function SignupForm({ onSignup }: { onSignup?: (data: any) => voi
   const [emailError, setEmailError] = useState("");
   const [passwordError, setPasswordError] = useState("");
   const [confirmPasswordError, setConfirmPasswordError] = useState("");
-  const [toastVisible, setToastVisible] = useState(false);
-  const [toastMessage, setToastMessage] = useState("");
-  const [toastType, setToastType] = useState<"success" | "error" | "info" | "warning">("error");
 
   const router = useRouter();
-
-  const showToast = (message: string, type: "success" | "error" | "info" | "warning" = "error") => {
-    setToastMessage(message);
-    setToastType(type);
-    setToastVisible(true);
-  };
 
   const clearErrors = () => {
     setNameError("");
@@ -62,39 +53,57 @@ export default function SignupForm({ onSignup }: { onSignup?: (data: any) => voi
     clearErrors();
 
     if (!name || !email || !password || !confirmPassword) {
-      if (!name) setNameError("Name is required");
-      if (!email) setEmailError("Email is required");
-      if (!password) setPasswordError("Password is required");
-      if (!confirmPassword) setConfirmPasswordError("Confirm password is required");
+      if (!name) setNameError("Nama harus diisi");
+      if (!email) setEmailError("Email harus diisi");
+      if (!password) setPasswordError("Password harus diisi");
+      if (!confirmPassword) setConfirmPasswordError("Konfirmasi password harus diisi");
       return;
     }
     if (password !== confirmPassword) {
-      setConfirmPasswordError("Passwords do not match");
+      setConfirmPasswordError("Password tidak cocok");
       return;
     }
 
     setIsLoading(true);
 
     try {
-      const response = await fetch(
-      //jika ini tidak berkerja maka ganti ip address dengan ipnya kalian
-        "http://192.168.0.194:8000/api/auth/register",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Accept": "application/json",
-          },
-          body: JSON.stringify({
-            name,
-            email,
-            password,
-            password_confirmation: confirmPassword,
-          }),
-        }
-      );
+      const getApiHost = () => {
+        if (Platform.OS === "web") return "http://localhost:8000";
+        const expoConfig = (Constants as any).expoConfig || {};
+        const hostUri = expoConfig?.hostUri || "";
+        const hostFromUri = hostUri ? hostUri.split(":")[0] : null;
+        const fallbackHost = "192.168.18.28"; // replace if needed
+        const host = hostFromUri || fallbackHost;
+        return `http://${host}:8000`;
+      };
 
-      const data = await response.json();
+      const url = `${getApiHost()}/api/auth/register`;
+
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+        },
+        body: JSON.stringify({
+          name,
+          email,
+          password,
+          password_confirmation: confirmPassword,
+        }),
+      });
+
+      const contentType = response.headers.get("content-type") || "";
+      let data: any = null;
+      if (contentType.includes("application/json")) {
+        data = await response.json();
+      } else {
+        const text = await response.text();
+        console.log("SIGNUP NON-JSON RESPONSE:", response.status, text);
+        setEmailError(`Server error: ${response.status}`);
+        setIsLoading(false);
+        return;
+      }
 
       console.log("SIGNUP RESPONSE:", data);
 
@@ -106,14 +115,11 @@ export default function SignupForm({ onSignup }: { onSignup?: (data: any) => voi
             setNameError(data.errors.name[0]);
           }
           if (data.errors.email) {
-            setEmailError(data.errors.email[0]);
+            setEmailError("Email atau password tidak valid");
           }
           if (data.errors.password) {
             setPasswordError(data.errors.password[0]);
           }
-        } else {
-          // Generic error message
-          showToast(data.message || "Sign up failed", "error");
         }
         setIsLoading(false);
         return;
@@ -135,7 +141,7 @@ export default function SignupForm({ onSignup }: { onSignup?: (data: any) => voi
 
     } catch (error) {
       console.log("SIGNUP ERROR:", error);
-      showToast("Could not connect to backend", "error");
+      setEmailError("Tidak bisa terhubung ke server");
       setIsLoading(false);
     }
   }
@@ -195,13 +201,6 @@ export default function SignupForm({ onSignup }: { onSignup?: (data: any) => voi
       </View>
 
       <SignupFooter />
-
-      <Toast
-        visible={toastVisible}
-        message={toastMessage}
-        type={toastType}
-        onDismiss={() => setToastVisible(false)}
-      />
     </View>
   );
 }
@@ -235,5 +234,3 @@ const localStyles = StyleSheet.create({
     fontWeight: "600",
   },
 });
-
-

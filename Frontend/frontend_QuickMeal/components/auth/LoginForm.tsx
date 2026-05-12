@@ -1,16 +1,17 @@
 import React, { useState } from "react";
-import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet, Platform } from "react-native";
 import { useRouter } from "expo-router";
+import Constants from "expo-constants";
 
 import CustomInput from "@/components/ui/customInput";
 import CustomButton from "@/components/ui/customButton";
 import { shared, colors } from "@/components/ui/styles";
 
-export default function LoginForm({
-  onLogin,
-}: {
+type LoginFormProps = Readonly<{
   onLogin?: (u: string, p: string) => void;
-}) {
+}>;
+
+export default function LoginForm({ onLogin }: LoginFormProps) {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -24,30 +25,50 @@ export default function LoginForm({
       // Clear previous errors
       setPasswordError("");
 
-      const response = await fetch(
-        "http://192.168.0.194:8000/api/auth/login",
-        {
-          method: "POST",
+      const getApiHost = () => {
+        if (Platform.OS === "web") return "http://localhost:8000";
+        const expoConfig = (Constants as any).expoConfig || {};
+        const hostUri = expoConfig?.hostUri || "";
+        const hostFromUri = hostUri ? hostUri.split(":")[0] : null;
+        const fallbackHost = "192.168.18.28"; // replace if needed
+        const host = hostFromUri || fallbackHost;
+        return `http://${host}:8000`;
+      };
 
-          headers: {
-            "Content-Type": "application/json",
-            "Accept": "application/json",
-          },
+      const url = `${getApiHost()}/api/auth/login`;
 
-          body: JSON.stringify({
-            email,
-            password,
-          }),
-        }
-      );
+      const response = await fetch(url, {
+        method: "POST",
 
-      const data = await response.json();
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+        },
+
+        body: JSON.stringify({
+          email,
+          password,
+        }),
+      });
+
+      const contentType = response.headers.get("content-type") || "";
+      let data: any = null;
+      if (contentType.includes("application/json")) {
+        data = await response.json();
+      } else {
+        const text = await response.text();
+        console.log("LOGIN NON-JSON RESPONSE:", response.status, text);
+        setPasswordError(`Server error: ${response.status}`);
+        return;
+      }
 
       console.log("LOGIN RESPONSE:", data);
 
       // LOGIN FAILED
       if (!response.ok) {
-        setPasswordError("Invalid email or password");
+
+        setPasswordError("Email atau password tidak valid");
+
         return;
       }
 
@@ -68,7 +89,7 @@ export default function LoginForm({
 
       console.log("LOGIN ERROR:", error);
 
-      setPasswordError("Could not connect to backend");
+      setPasswordError("Tidak bisa terhubung ke server");
     }
   }
 
@@ -80,7 +101,7 @@ export default function LoginForm({
       <CustomInput
         placeholder="example@gmail.com"
         value={email}
-        onChangeText={(text) => {
+        onChangeText={(text: string) => {
           setEmail(text);
           setPasswordError("");
         }}
@@ -91,7 +112,7 @@ export default function LoginForm({
       <CustomInput
         placeholder="Password"
         value={password}
-        onChangeText={(text) => {
+        onChangeText={(text: string) => {
           setPassword(text);
           setPasswordError("");
         }}
