@@ -247,5 +247,3 @@ const localStyles = StyleSheet.create({
     fontWeight: "600",
   },
 });
-
-
