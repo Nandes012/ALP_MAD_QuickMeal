@@ -1,76 +1,99 @@
-import React from 'react';
-import { StyleSheet, Text, View, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { StyleSheet, Text, View, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { API_BASE_URL } from '@/constants/api';
 
-// 1. Data Source: Daftar bahan berdasarkan nama menu
-const DATA_BAHAN: Record<string, string[]> = {
-  "Nasi goreng": [
-    "2 piring nasi putih dingin",
-    "2 butir telur ayam",
-    "3 siung bawang merah & 2 siung bawang putih",
-    "Kecap manis & saus tiram",
-    "Garam, lada, dan kaldu bubuk",
-    "Daun bawang iris"
-  ],
-  "Ayam kremas": [
-    "500gr daging ayam potong",
-    "Bumbu ungkep (lengkuas, kunyit, jahe)",
-    "Tepung beras & tapioka (untuk kremesan)",
-    "Baking powder agar renyah",
-    "Minyak goreng",
-    "Air kelapa (opsional untuk ungkep)"
-  ],
-  "Burger Spaicy": [
-    "Roti burger (Bun)",
-    "Daging patty sapi/ayam",
-    "Bubuk cabai & saus sambal ekstra pedas",
-    "Selada, tomat, dan timun",
-    "Keju slice",
-    "Mayones pedas"
-  ],
-  "Resep Ayam Crispy": [
-    "Potongan ayam segar",
-    "Tepung terigu protein tinggi",
-    "Tepung maizena",
-    "Susu cair & telur (untuk celupan)",
-    "Bawang putih bubuk & paprika bubuk",
-    "Garam & merica"
-  ],
-  "Resep Pisang Goreng": [
-    "1 sisir pisang kepok/raja",
-    "Tepung terigu & tepung beras",
-    "Sedikit margarin cair",
-    "Gula pasir & sejumput garam",
-    "Air secukupnya",
-    "Vanilla ekstrak (opsional)"
-  ],
-  "Resep Bakwan": [
-    "Wortel iris korek api",
-    "Kol/kubis iris halus",
-    "Tauge segar",
-    "Tepung terigu & maizena",
-    "Bawang putih & ketumbar halus",
-    "Daun seledri & daun bawang"
-  ],
-  "Resep Tempe Mendoan": [
-    "Tempe khusus mendoan (iris tipis lebar)",
-    "Tepung terigu & tepung beras",
-    "Daun bawang iris banyak",
-    "Kunyit bubuk & ketumbar",
-    "Garam & air",
-    "Sambal kecap untuk cocolan"
-  ]
-};
+interface Ingredient {
+  id: string;
+  ingredient_name: string;
+  quantity: string;
+  price_estimate: number;
+}
 
 export default function BahanPage() {
   const router = useRouter();
-  const { name } = useLocalSearchParams();
+  const { recipeId, name } = useLocalSearchParams();
+  
+  const [ingredients, setIngredients] = useState<Ingredient[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // 2. Ambil bahan berdasarkan 'name' yang dikirim dari params. 
-  // Jika nama tidak ditemukan, tampilkan pesan default.
-  const listBahan = DATA_BAHAN[name as string] || ["Bahan belum tersedia untuk resep ini"];
+  useEffect(() => {
+    const fetchIngredients = async () => {
+      try {
+        if (!recipeId) {
+          setError("Recipe ID not provided");
+          setLoading(false);
+          return;
+        }
+
+        const response = await fetch(`${API_BASE_URL}/recipes/${recipeId}`);
+        
+        if (!response.ok) {
+          throw new Error(`API error: ${response.status}`);
+        }
+
+        const result = await response.json();
+        
+        if (result?.success && result.data?.ingredients) {
+          setIngredients(result.data.ingredients);
+          setError(null);
+        } else {
+          setError("Failed to load ingredients");
+        }
+      } catch (err) {
+        console.error("Error fetching ingredients:", err);
+        setError(err instanceof Error ? err.message : "Failed to fetch ingredients");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchIngredients();
+  }, [recipeId]);
+
+  let content: React.ReactNode;
+
+  if (loading) {
+    content = (
+      <View style={{ alignItems: 'center', justifyContent: 'center', paddingTop: 40 }}>
+        <ActivityIndicator size="large" color="#9E5F3B" />
+      </View>
+    );
+  } else if (error) {
+    content = (
+      <View style={styles.card}>
+        <Text style={{ color: '#d32f2f', textAlign: 'center', fontSize: 16 }}>
+          {error}
+        </Text>
+      </View>
+    );
+  } else {
+    content = (
+      <View style={styles.card}>
+        <Text style={styles.infoText}>Daftar bahan yang perlu disiapkan:</Text>
+        {ingredients.length > 0 ? (
+          ingredients.map((item) => (
+            <View key={item.id} style={styles.itemRow}>
+              <View style={styles.checkCircle}>
+                <Ionicons name="checkmark" size={14} color="white" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.itemText}>{item.ingredient_name}</Text>
+                <Text style={styles.quantityText}>{item.quantity} (Rp. {Number(item.price_estimate).toLocaleString('id-ID')})</Text>
+              </View>
+            </View>
+          ))
+        ) : (
+          <Text style={{ color: '#999', textAlign: 'center', marginTop: 20 }}>
+            Tidak ada bahan tersedia
+          </Text>
+        )}
+      </View>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -83,17 +106,7 @@ export default function BahanPage() {
       </View>
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <View style={styles.card}>
-          <Text style={styles.infoText}>Daftar bahan yang perlu disiapkan:</Text>
-          {listBahan.map((item, index) => (
-            <View key={index} style={styles.itemRow}>
-              <View style={styles.checkCircle}>
-                <Ionicons name="checkmark" size={14} color="white" />
-              </View>
-              <Text style={styles.itemText}>{item}</Text>
-            </View>
-          ))}
-        </View>
+        {content}
         <View style={{ height: 50 }} />
       </ScrollView>
     </SafeAreaView>
@@ -139,5 +152,6 @@ const styles = StyleSheet.create({
     alignItems: 'center', 
     marginRight: 12 
   },
-  itemText: { fontSize: 15, color: '#333', flex: 1, fontWeight: '500' }
+  itemText: { fontSize: 15, color: '#333', fontWeight: '500' },
+  quantityText: { fontSize: 12, color: '#9E5F3B', marginTop: 4, fontWeight: '400' }
 });

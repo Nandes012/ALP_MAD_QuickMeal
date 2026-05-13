@@ -6,6 +6,7 @@ import { useRouter } from 'expo-router';
 
 // --- IMPORT FONT LANGAR ---
 import { useFonts, Langar_400Regular } from '@expo-google-fonts/langar';
+import { API_BASE_URL } from '@/constants/api';
 
 // 1. Perbaikan Interface (Samakan nama property dengan data)
 interface FoodItem {
@@ -17,8 +18,6 @@ interface FoodItem {
   ingredients?: string[];
   time?: string; // Tambahkan opsional time untuk detail resep
 }
-
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000/api';
 
 // Page state for fetched lists
 const useFetchList = (activeTab: 'Masak' | 'Order') => {
@@ -142,7 +141,9 @@ export default function ListScreen() {
     listContent = (
       <View style={{ paddingVertical: 24, alignItems: 'center' }}>
         <ActivityIndicator size="large" color="#9E5F3B" />
-        <Text style={{ marginTop: 10, color: '#8D5B3E' }}>{activeTab === 'Masak' ? 'Memuat resep...' : 'Memuat order...'}</Text>
+        <Text style={{ color: '#8D5B3E', marginTop: 12 }}>
+          {activeTab === 'Masak' ? 'Memuat resep...' : 'Memuat order...'}
+        </Text>
       </View>
     );
   } else if (data.length === 0) {
@@ -157,7 +158,7 @@ export default function ListScreen() {
         data={data}
         renderItem={renderFoodItem}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={{ paddingBottom: 100 }}
+        contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
       />
     );

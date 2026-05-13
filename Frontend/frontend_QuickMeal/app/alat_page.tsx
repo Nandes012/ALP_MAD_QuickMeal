@@ -1,15 +1,100 @@
-import React from 'react';
-import { StyleSheet, Text, View, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { StyleSheet, Text, View, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { API_BASE_URL } from '@/constants/api';
+
+interface Tool {
+  id: string;
+  tool_name: string;
+  description?: string;
+}
 
 export default function AlatPage() {
   const router = useRouter();
-  const { name } = useLocalSearchParams();
+  const { recipeId, name } = useLocalSearchParams();
+  
+  const [tools, setTools] = useState<Tool[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Daftar alat masak
-  const ALAT = ["Wajan", "Spatula", "Pisau", "Talenan", "Piring Saji"];
+  useEffect(() => {
+    const fetchTools = async () => {
+      try {
+        if (!recipeId) {
+          setError("Recipe ID not provided");
+          setLoading(false);
+          return;
+        }
+
+        const response = await fetch(`${API_BASE_URL}/recipes/${recipeId}`);
+        
+        if (!response.ok) {
+          throw new Error(`API error: ${response.status}`);
+        }
+
+        const result = await response.json();
+        
+        if (result?.success && result.data?.tools) {
+          setTools(result.data.tools);
+          setError(null);
+        } else {
+          setError("Failed to load tools");
+        }
+      } catch (err) {
+        console.error("Error fetching tools:", err);
+        setError(err instanceof Error ? err.message : "Failed to fetch tools");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTools();
+  }, [recipeId]);
+
+  let content: React.ReactNode;
+
+  if (loading) {
+    content = (
+      <View style={{ alignItems: 'center', justifyContent: 'center', paddingTop: 40 }}>
+        <ActivityIndicator size="large" color="#9E5F3B" />
+      </View>
+    );
+  } else if (error) {
+    content = (
+      <View style={styles.card}>
+        <Text style={{ color: '#d32f2f', textAlign: 'center', fontSize: 16 }}>
+          {error}
+        </Text>
+      </View>
+    );
+  } else {
+    content = (
+      <View style={styles.card}>
+        <Text style={styles.infoText}>Peralatan yang harus kamu siapkan:</Text>
+        {tools.length > 0 ? (
+          tools.map((item) => (
+            <View key={item.id} style={styles.itemRow}>
+              <View style={styles.checkCircle}>
+                <Ionicons name="checkmark" size={14} color="white" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.itemText}>{item.tool_name}</Text>
+                {item.description && (
+                  <Text style={styles.descriptionText}>{item.description}</Text>
+                )}
+              </View>
+            </View>
+          ))
+        ) : (
+          <Text style={{ color: '#999', textAlign: 'center', marginTop: 20 }}>
+            Tidak ada alat tersedia
+          </Text>
+        )}
+      </View>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -23,19 +108,7 @@ export default function AlatPage() {
       </View>
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <View style={styles.card}>
-          <Text style={styles.infoText}>Peralatan yang harus kamu siapkan:</Text>
-          
-          {ALAT.map((item, index) => (
-            <View key={index} style={styles.itemRow}>
-              {/* Lingkaran Checklist */}
-              <View style={styles.checkCircle}>
-                <Ionicons name="checkmark" size={14} color="white" />
-              </View>
-              <Text style={styles.itemText}>{item}</Text>
-            </View>
-          ))}
-        </View>
+        {content}
 
         {/* Footer spacer */}
         <View style={{ height: 50 }} />
@@ -106,5 +179,11 @@ const styles = StyleSheet.create({
     fontSize: 15, 
     color: '#333',
     fontWeight: '500'
+  },
+  descriptionText: {
+    fontSize: 12,
+    color: '#9E5F3B',
+    marginTop: 4,
+    fontWeight: '400'
   }
 });

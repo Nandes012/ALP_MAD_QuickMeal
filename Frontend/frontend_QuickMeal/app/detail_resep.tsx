@@ -1,40 +1,104 @@
-import React from 'react';
-import { StyleSheet, Text, View, Image, TouchableOpacity, ScrollView, StatusBar } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { StyleSheet, Text, View, Image, TouchableOpacity, ScrollView, StatusBar, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { API_BASE_URL } from '@/constants/api';
+
+interface RecipeDetail {
+  id: string;
+  title: string;
+  subtitle?: string;
+  image?: string;
+  cookingTime?: number;
+  difficulty?: string;
+  totalIngredientPrice?: number;
+  ingredients: any[];
+  tools: any[];
+  steps: any[];
+}
 
 export default function DetailResepScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
-
-  const name = params.name || "Resep Makanan";
-  const imageUrl = params.imageUrl ? decodeURIComponent(params.imageUrl as string) : null;
-  const price = params.price || "0";
-  const time = params.time || "25 Menit"; 
-
-  // Ambil string ingredients dan parse dengan aman
-  let ingredientsData = [];
-  if (params.ingredients) {
-    try {
-      ingredientsData = typeof params.ingredients === 'string' 
-        ? JSON.parse(params.ingredients) 
-        : params.ingredients;
-    } catch (e) {
-      console.error("Gagal parse ingredients", e);
-      ingredientsData = [];
-    }
-  }
+  const recipeId = params.id as string;
   
-  const totalIngredients = ingredientsData.length;
+  const [recipe, setRecipe] = useState<RecipeDetail | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const LANGKAH = [
-    `Persiapkan semua bahan yang diperlukan untuk membuat ${name}.`,
-    `Cuci bersih dan potong bahan sesuai instruksi resep.`,
-    `Panaskan alat masak, lalu olah bumbu hingga harum.`,
-    `Masak hingga matang merata dan koreksi rasa.`,
-    `Sajikan ${name} selagi hangat.`,
-  ];
+  useEffect(() => {
+    const fetchRecipeDetail = async () => {
+      try {
+        if (!recipeId) {
+          setError("Recipe ID not provided");
+          setLoading(false);
+          return;
+        }
+
+        const response = await fetch(`${API_BASE_URL}/recipes/${recipeId}`);
+        
+        if (!response.ok) {
+          throw new Error(`API error: ${response.status}`);
+        }
+
+        const result = await response.json();
+        
+        if (result?.success && result.data) {
+          setRecipe(result.data);
+          setError(null);
+        } else {
+          setError("Invalid response from server");
+        }
+      } catch (err) {
+        console.error("Error fetching recipe detail:", err);
+        setError(err instanceof Error ? err.message : "Failed to fetch recipe");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchRecipeDetail();
+  }, [recipeId]);
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <ActivityIndicator size="large" color="#9E5F3B" />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (error || !recipe) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.headerBar}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={24} color="#5b2f20" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitlePage}>Detail Resep</Text>
+          <View style={{ width: 40 }} />
+        </View>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20 }}>
+          <Text style={{ color: '#d32f2f', fontSize: 16, textAlign: 'center' }}>
+            {error || "Recipe not found"}
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  const name = recipe.title;
+  const imageUrl = recipe.image;
+  const price = recipe.totalIngredientPrice?.toString() || "0";
+  const time = recipe.cookingTime ? `${recipe.cookingTime} Menit` : "Time unknown";
+  const ingredientsData = recipe.ingredients || [];
+  const toolsData = recipe.tools || [];
+  const stepsData = recipe.steps || [];
+  const totalIngredients = ingredientsData.length;
+  const totalTools = toolsData.length;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -75,9 +139,8 @@ export default function DetailResepScreen() {
           onPress={() => router.push({ 
             pathname: '/bahan_page', 
             params: { 
-              name: name, 
-              // Pastikan data dikirim kembali dalam bentuk string
-              ingredients: JSON.stringify(ingredientsData) 
+              recipeId,
+              name: name
             } 
           })}
         >
@@ -90,27 +153,31 @@ export default function DetailResepScreen() {
 
         <TouchableOpacity 
           style={styles.accordion}
-          onPress={() => router.push({ pathname: '/alat_page', params: { name } })}
+          onPress={() => router.push({ pathname: '/alat_page', params: { recipeId, name } })}
         >
           <View style={styles.accordionLeft}>
             <Ionicons name="restaurant-outline" size={20} color="#9E5F3B" />
-            <Text style={styles.accordionText}>Alat Masak</Text>
+            <Text style={styles.accordionText}>Alat Masak ({totalTools} item)</Text>
           </View>
           <Ionicons name="chevron-forward" size={20} color="#999" />
         </TouchableOpacity>
 
         <View style={styles.stepContainer}>
           <Text style={styles.stepTitle}>Langkah Memasak</Text>
-          {LANGKAH.map((item, index) => (
-            <View key={index} style={styles.stepRow}>
-              <View style={styles.stepNumberContainer}>
-                <Text style={styles.stepNumber}>{index + 1}</Text>
+          {stepsData.length > 0 ? (
+            stepsData.map((item, index) => (
+              <View key={item.id || index} style={styles.stepRow}>
+                <View style={styles.stepNumberContainer}>
+                  <Text style={styles.stepNumber}>{item.stepNumber || index + 1}</Text>
+                </View>
+                <View style={styles.stepTextBubble}>
+                  <Text style={styles.stepText}>{item.description}</Text>
+                </View>
               </View>
-              <View style={styles.stepTextBubble}>
-                <Text style={styles.stepText}>{item}</Text>
-              </View>
-            </View>
-          ))}
+            ))
+          ) : (
+            <Text style={{ color: '#999', textAlign: 'center', marginTop: 20 }}>Tidak ada langkah tersedia</Text>
+          )}
         </View>
 
         <View style={{ height: 50 }} />

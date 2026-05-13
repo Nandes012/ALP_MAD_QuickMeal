@@ -102,7 +102,7 @@ class RecipeController extends Controller
     public function show($id): JsonResponse
     {
         try {
-            $recipe = Recipe::with(['ingredients.ingredient', 'steps'])->find($id);
+            $recipe = Recipe::with(['ingredients.ingredient', 'steps', 'tools'])->find($id);
 
             if (!$recipe) {
                 return response()->json([
@@ -130,7 +130,20 @@ class RecipeController extends Controller
                             'price_estimate' => (float) $item->price_estimate,
                         ];
                     }),
-                    'steps' => $recipe->steps,
+                    'tools' => $recipe->tools->map(function ($tool) {
+                        return [
+                            'id' => (string) $tool->id,
+                            'tool_name' => $tool->tool_name,
+                            'description' => $tool->description,
+                        ];
+                    }),
+                    'steps' => $recipe->steps->map(function ($step) {
+                        return [
+                            'id' => (string) $step->id,
+                            'stepNumber' => $step->stepNumber,
+                            'description' => $step->description,
+                        ];
+                    }),
                 ]
             ]);
         } catch (\Exception $e) {
