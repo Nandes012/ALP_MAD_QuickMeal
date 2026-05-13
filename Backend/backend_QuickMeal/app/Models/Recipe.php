@@ -16,7 +16,12 @@ class Recipe extends Model
 
     public function steps(): HasMany
     {
-        return $this->hasMany(RecipeStep::class);
+        return $this->hasMany(RecipeStep::class, 'recipeId');
+    }
+
+    public function tools(): HasMany
+    {
+        return $this->hasMany(RecipeTool::class);
     }
 
     public function recommendations()

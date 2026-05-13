@@ -15,10 +15,13 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
-        ]);
+        // Create test user only when not exists to avoid duplicate key errors
+        if (!\App\Models\User::where('email', 'test@example.com')->exists()) {
+            User::factory()->create([
+                'name' => 'Test User',
+                'email' => 'test@example.com',
+            ]);
+        }
 
         // Seed recipes for testing
         $this->call(RecipeSeeder::class);
@@ -26,6 +29,10 @@ class DatabaseSeeder extends Seeder
         $this->call(IngredientSeeder::class);
         // Seed recipe ingredient + price mapping
         $this->call(RecipeIngredientSeeder::class);
+        // Seed recipe steps
+        $this->call(RecipeStepSeeder::class);
+        // Seed recipe tools
+        $this->call(RecipeToolSeeder::class);
         // Seed orders for testing
         $this->call(OrderSeeder::class);
     }

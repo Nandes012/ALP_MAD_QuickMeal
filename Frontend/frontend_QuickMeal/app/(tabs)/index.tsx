@@ -3,10 +3,10 @@ import { StyleSheet, Text, View, Image, TouchableOpacity, ScrollView, Platform, 
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import Constants from 'expo-constants';
 
 // --- IMPORT FONT LANGAR ---
 import { useFonts, Langar_400Regular } from '@expo-google-fonts/langar';
+import { API_BASE_URL } from '@/constants/api';
 
 interface FoodItem {
   id: string;
@@ -23,18 +23,6 @@ type RecipeApiItem = {
   cookingTime?: number | null;
   difficulty?: string | null;
 };
-
-const getApiHost = () => {
-  if (Platform.OS === "web") return "http://localhost:8000";
-  const expoConfig = (Constants as any).expoConfig || {};
-  const hostUri = expoConfig?.hostUri || "";
-  const hostFromUri = hostUri ? hostUri.split(":")[0] : null;
-  const fallbackHost = "192.168.18.28";
-  const host = hostFromUri || fallbackHost;
-  return `http://${host}:8000`;
-};
-
-const API_BASE_URL = `${getApiHost()}/api`;
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -89,10 +77,9 @@ export default function HomeScreen() {
       key={item.id} 
       style={styles.card} 
       activeOpacity={0.9}
-      // Tambahan: Klik area kartu juga bisa masuk ke detail
       onPress={() => router.push({
         pathname: "/detail_resep",
-        params: { name: item.name, image: item.imageUri }
+        params: { id: item.id, name: item.name, imageUrl: item.imageUri }
       })}
     >
       <View style={styles.cardContent}>
@@ -101,12 +88,10 @@ export default function HomeScreen() {
             <Text style={styles.foodName}>{item.name}</Text>
           </View>
           <Text style={styles.foodDesc} numberOfLines={2}>{item.desc}</Text>
-          
-          {/* PERUBAHAN DI SINI: Navigasi saat klik Lihat Detail */}
           <TouchableOpacity 
             onPress={() => router.push({
               pathname: "/detail_resep",
-              params: { name: item.name, image: item.imageUri }
+              params: { id: item.id, name: item.name, imageUrl: item.imageUri }
             })}
           >
             <Text style={styles.detailText}>Lihat Detail</Text>

@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, Image, TouchableOpacity, FlatList, StatusBar, ActivityIndicator, Platform } from 'react-native';
+import { StyleSheet, Text, View, Image, TouchableOpacity, FlatList, StatusBar, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import Constants from 'expo-constants';
 
 // --- IMPORT FONT LANGAR ---
 import { useFonts, Langar_400Regular } from '@expo-google-fonts/langar';
+import { API_BASE_URL } from '@/constants/api';
 
 // 1. Perbaikan Interface (Samakan nama property dengan data)
 interface FoodItem {
@@ -18,18 +18,6 @@ interface FoodItem {
   ingredients?: string[];
   time?: string; // Tambahkan opsional time untuk detail resep
 }
-
-const getApiHost = () => {
-  if (Platform.OS === "web") return "http://localhost:8000";
-  const expoConfig = (Constants as any).expoConfig || {};
-  const hostUri = expoConfig?.hostUri || "";
-  const hostFromUri = hostUri ? hostUri.split(":")[0] : null;
-  const fallbackHost = "192.168.18.28";
-  const host = hostFromUri || fallbackHost;
-  return `http://${host}:8000`;
-};
-
-const API_BASE_URL = `${getApiHost()}/api`;
 
 // Page state for fetched lists
 const useFetchList = (activeTab: 'Masak' | 'Order') => {
@@ -153,7 +141,9 @@ export default function ListScreen() {
     listContent = (
       <View style={{ paddingVertical: 24, alignItems: 'center' }}>
         <ActivityIndicator size="large" color="#9E5F3B" />
-        <Text style={{ marginTop: 10, color: '#8D5B3E' }}>{activeTab === 'Masak' ? 'Memuat resep...' : 'Memuat order...'}</Text>
+        <Text style={{ color: '#8D5B3E', marginTop: 12 }}>
+          {activeTab === 'Masak' ? 'Memuat resep...' : 'Memuat order...'}
+        </Text>
       </View>
     );
   } else if (data.length === 0) {
@@ -168,7 +158,7 @@ export default function ListScreen() {
         data={data}
         renderItem={renderFoodItem}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={{ paddingBottom: 100 }}
+        contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
       />
     );
