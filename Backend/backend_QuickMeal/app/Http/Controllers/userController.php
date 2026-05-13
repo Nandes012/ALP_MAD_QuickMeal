@@ -27,7 +27,7 @@ class UserController extends Controller
             'password' => 'required|string|min:8',
 
             // PROFILE PICTURE VALIDATION
-            'profile_picture' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
+            'profile_picture' => 'nullable|image|mimes:jpeg,png,jpg,gif,heic|max:2048',
         ]);
 
         // Lowercase email
@@ -192,7 +192,7 @@ class UserController extends Controller
     /**
      * PUT /api/user
      */
-    public function update(Request $request)
+public function update(Request $request)
 {
     $user = $request->user();
 
@@ -209,27 +209,69 @@ class UserController extends Controller
 
         'password' => 'sometimes|string|min:8',
 
-        'profile_picture' => 'sometimes|image|mimes:jpeg,png,jpg,gif|max:2048',
+        'profile_picture' =>
+            'nullable|image|mimes:jpeg,png,jpg,gif,webp,heic|max:2048',
+
+        'remove_profile_picture' => 'sometimes|boolean',
     ]);
 
-    // lowercase email
+    // Lowercase email
     if (isset($validated['email'])) {
-
         $validated['email'] = strtolower($validated['email']);
     }
 
-    // hash password
+    // Hash password
     if (isset($validated['password'])) {
-
-        $validated['password'] = bcrypt($validated['password']);
+        $validated['password'] = Hash::make($validated['password']);
     }
 
-    // upload profile picture
+    /*
+    |--------------------------------------------------------------------------
+    | REMOVE PROFILE PICTURE
+    |--------------------------------------------------------------------------
+    */
+if ($request->filled('remove_profile_picture')) {
+
+    // Delete old file
+    if (
+        $user->profile_picture &&
+        file_exists(
+            storage_path('app/public/' . $user->profile_picture)
+        )
+    ) {
+
+        unlink(
+            storage_path('app/public/' . $user->profile_picture)
+        );
+    }
+
+    $validated['profile_picture'] = null;
+}
+
+    /*
+    |--------------------------------------------------------------------------
+    | UPLOAD NEW PROFILE PICTURE
+    |--------------------------------------------------------------------------
+    */
     if ($request->hasFile('profile_picture')) {
+
+        // Delete old image first
+        if (
+            $user->profile_picture &&
+            file_exists(
+                storage_path('app/public/' . $user->profile_picture)
+            )
+        ) {
+
+            unlink(
+                storage_path('app/public/' . $user->profile_picture)
+            );
+        }
 
         $file = $request->file('profile_picture');
 
-        $filename = time() . '_' . $file->getClientOriginalName();
+        $filename =
+            time() . '_' . $file->getClientOriginalName();
 
         $path = $file->storeAs(
             'profile_pictures',
@@ -240,7 +282,7 @@ class UserController extends Controller
         $validated['profile_picture'] = $path;
     }
 
-    // update user
+    // Update user
     $user->update($validated);
 
     return response()->json([

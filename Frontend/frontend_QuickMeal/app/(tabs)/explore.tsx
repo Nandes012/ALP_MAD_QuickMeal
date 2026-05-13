@@ -3,6 +3,7 @@ import { StyleSheet, Text, View, Image, TouchableOpacity, FlatList, StatusBar } 
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { API_BASE_URL } from '@/constants/api';
 
 // --- DATA INTERFACE ---
 interface FoodItem {
@@ -13,9 +14,6 @@ interface FoodItem {
   rating?: string;
 }
 
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000/api';
-
-// Helper to fetch recipes or orders based on active tab
 async function fetchList(activeTab: 'Masak' | 'Order') {
   if (activeTab === 'Masak') {
     const res = await fetch(`${API_BASE_URL}/recipes`);
@@ -88,24 +86,25 @@ export default function ExploreScreen() {
         </View>
         <Text style={styles.foodPrice}>RP. {item.price}</Text>
         
-        <TouchableOpacity 
-          style={styles.detailButton}
-          onPress={() => {
-            const path = activeTab === 'Masak' ? '/detail_resep' : '/detail_order';
-            router.push({ 
-                pathname: path as any, 
-                params: {
-                  name: item.name,
-                  imageUrl: item.image,
-                  price: item.price
-                } 
-            });
-          }}
-        >
-          <Text style={styles.detailButtonText}>
-            {activeTab === 'Masak' ? 'Resep' : 'Order Detail'}
-          </Text>
-        </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.detailButton}
+            onPress={() => {
+              const path = activeTab === 'Masak' ? '/detail_resep' : '/detail_order';
+              router.push({ 
+                  pathname: path as any, 
+                  params: {
+                    id: activeTab === 'Masak' ? item.id : undefined,
+                    name: item.name,
+                    imageUrl: item.image,
+                    price: item.price
+                  } 
+              });
+            }}
+          >
+            <Text style={styles.detailButtonText}>
+              {activeTab === 'Masak' ? 'Resep' : 'Order Detail'}
+            </Text>
+          </TouchableOpacity>
       </View>
       <Image source={{ uri: item.image }} style={styles.foodImage} />
     </View>
