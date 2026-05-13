@@ -14,6 +14,7 @@ class UserController extends Controller
     public function register(Request $request)
     {
         $validated = $request->validate([
+
             'name' => 'required|string|max:255',
 
             'email' => [
@@ -23,7 +24,10 @@ class UserController extends Controller
                 'regex:/^[A-Za-z0-9._%+-]+@gmail\.com$/'
             ],
 
-            'password' => 'required|string|min:8|confirmed',
+            'password' => 'required|string|min:8',
+
+            // PROFILE PICTURE VALIDATION
+            'profile_picture' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
         ]);
 
         // Lowercase email
@@ -34,6 +38,19 @@ class UserController extends Controller
 
         // Default premium status
         $validated['is_premium'] = false;
+
+        /*
+        |--------------------------------------------------------------------------
+        | Upload Profile Picture
+        |--------------------------------------------------------------------------
+        */
+        if ($request->hasFile('profile_picture')) {
+
+            $path = $request->file('profile_picture')
+                            ->store('profile', 'public');
+
+            $validated['profile_picture'] = $path;
+        }
 
         // Create user
         $user = User::create($validated);
@@ -55,6 +72,7 @@ class UserController extends Controller
     public function login(Request $request)
     {
         $validated = $request->validate([
+
             'email' => [
                 'required',
                 'email:rfc,dns',
@@ -116,15 +134,16 @@ class UserController extends Controller
 
     /**
      * GET /api/users
-     * Get ALL users, or get authenticated user if ?me=true parameter is provided
      */
     public function index(Request $request)
     {
-        // If requesting current authenticated user
+        // Get authenticated user
         if ($request->query('me')) {
+
             $user = $request->user();
 
             if (!$user) {
+
                 return response()->json([
                     'success' => false,
                     'message' => 'Unauthenticated'
@@ -143,6 +162,7 @@ class UserController extends Controller
             ], 200);
         }
 
+        // Get all users
         $users = User::all();
 
         return response()->json([
@@ -154,7 +174,6 @@ class UserController extends Controller
 
     /**
      * GET /api/users/{id}
-     * Get single user
      */
     public function show($id)
     {
@@ -172,45 +191,64 @@ class UserController extends Controller
 
     /**
      * PUT /api/user
-     * Update current logged-in user
      */
     public function update(Request $request)
-    {
-        $user = $request->user();
+{
+    $user = $request->user();
 
-        $validated = $request->validate([
+    $validated = $request->validate([
 
-            'name' => 'sometimes|string|max:255',
+        'name' => 'sometimes|string|max:255',
 
-            'email' => [
-                'sometimes',
-                'email:rfc,dns',
-                'unique:users,email,' . $user->id,
-                'regex:/^[A-Za-z0-9._%+-]+@gmail\.com$/'
-            ],
+        'email' => [
+            'sometimes',
+            'email:rfc,dns',
+            'unique:users,email,' . $user->id,
+            'regex:/^[A-Za-z0-9._%+-]+@gmail\.com$/'
+        ],
 
-            'password' => 'sometimes|string|min:8|confirmed',
-        ]);
+        'password' => 'sometimes|string|min:8',
 
-        // Lowercase email
-        if (isset($validated['email'])) {
-            $validated['email'] = strtolower($validated['email']);
-        }
+        'profile_picture' => 'sometimes|image|mimes:jpeg,png,jpg,gif|max:2048',
+    ]);
 
-        // Hash password
-        if (isset($validated['password'])) {
-            $validated['password'] = Hash::make($validated['password']);
-        }
+    // lowercase email
+    if (isset($validated['email'])) {
 
-        // Update user
-        $user->update($validated);
-
-        return response()->json([
-            'success' => true,
-            'message' => 'User updated successfully',
-            'data' => $user
-        ], 200);
+        $validated['email'] = strtolower($validated['email']);
     }
+
+    // hash password
+    if (isset($validated['password'])) {
+
+        $validated['password'] = bcrypt($validated['password']);
+    }
+
+    // upload profile picture
+    if ($request->hasFile('profile_picture')) {
+
+        $file = $request->file('profile_picture');
+
+        $filename = time() . '_' . $file->getClientOriginalName();
+
+        $path = $file->storeAs(
+            'profile_pictures',
+            $filename,
+            'public'
+        );
+
+        $validated['profile_picture'] = $path;
+    }
+
+    // update user
+    $user->update($validated);
+
+    return response()->json([
+        'success' => true,
+        'message' => 'User updated successfully',
+        'data' => $user
+    ], 200);
+}
 
     /**
      * DELETE /api/users/{id}

@@ -16,20 +16,27 @@ return new class extends Migration
                     $table->boolean('is_premium')->default(false)->after('password');
                 });
             }
-            return;
+            if (!Schema::hasColumn('users', 'profile_picture')) {
+                Schema::table('users', function (Blueprint $table) {
+                    $table->string('profile_picture')
+                            ->nullable()
+                            ->after('is_premium');
+                });
+            }
+        } else {
+            // If users table does not exist (e.g. migrations ordering / clean DB), create it with the expected schema.
+            Schema::create('users', function (Blueprint $table) {
+                $table->id();
+                $table->string('name');
+                $table->string('email')->unique();
+                $table->timestamp('email_verified_at')->nullable();
+                $table->string('password');
+                $table->boolean('is_premium')->default(false);
+                $table->string('remember_token')->nullable();
+                $table->string('profile_picture')->nullable();
+                $table->timestamps();
+            });
         }
-
-        // If users table does not exist (e.g. migrations ordering / clean DB), create it with the expected schema.
-        Schema::create('users', function (Blueprint $table) {
-            $table->id();
-            $table->string('name');
-            $table->string('email')->unique();
-            $table->timestamp('email_verified_at')->nullable();
-            $table->string('password');
-            $table->boolean('is_premium')->default(false);
-            $table->string('remember_token')->nullable();
-            $table->timestamps();
-        });
     }
 
 
@@ -40,5 +47,10 @@ return new class extends Migration
                 $table->dropColumn('is_premium');
             });
         }
-    }
-};
+        if (Schema::hasColumn('users', 'profile_picture')) {
+            Schema::table('users', function (Blueprint $table) {
+                $table->dropColumn('profile_picture');
+            });
+                }
+        }
+    };
