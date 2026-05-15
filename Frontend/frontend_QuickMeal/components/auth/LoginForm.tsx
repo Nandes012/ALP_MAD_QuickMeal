@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import CustomInput from "@/components/ui/customInput";
 import CustomButton from "@/components/ui/customButton";
@@ -71,6 +72,9 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
       console.log("TOKEN:", data.token);
 
       console.log("USER:", data.user);
+
+      // Save token to AsyncStorage
+      await AsyncStorage.setItem('auth_token', data.token);
 
       // Navigate to home
       router.replace("/(tabs)");

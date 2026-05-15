@@ -90,8 +90,6 @@ export default function ListScreen() {
     'Langar-Regular': Langar_400Regular,
   });
 
-  if (!fontsLoaded) return null;
-
   const renderFoodItem = ({ item }: { item: FoodItem }) => (
     <View style={styles.card}>
       <View style={styles.cardInfo}>
@@ -169,12 +167,6 @@ export default function ListScreen() {
       <StatusBar barStyle="dark-content" />
       <View style={styles.header}>
         <Text style={styles.logoText}>QuickMeal</Text>
-        <TouchableOpacity style={styles.profileButton}>
-          <Image source={{ uri: 'https://i.pinimg.com/736x/8b/16/7a/8b167af653c2399dd93b952a48740620.jpg' }} style={styles.profileImage} />
-          <View style={styles.editIconBadge}>
-             <Ionicons name="pencil" size={8} color="white" />
-          </View>
-        </TouchableOpacity>
       </View>
 
       <View style={styles.tabContainer}>
@@ -220,13 +212,12 @@ export default function ListScreen() {
 }
 
 // ... Styles tetap sama ...
+
+
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#FFF8EF' },
-    header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 10 },
+    header: { flexDirection: 'row', justifyContent: 'flex-start', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 10 },
     logoText: { fontSize: 28, color: '#9E5F3B', fontFamily: 'Langar-Regular' },
-    profileButton: { position: 'relative' },
-    profileImage: { width: 40, height: 40, borderRadius: 20, borderWidth: 1, borderColor: '#5b2f20' },
-    editIconBadge: { position: 'absolute', right: -2, bottom: -2, backgroundColor: '#5b2f20', borderRadius: 10, padding: 2 },
     tabContainer: { flexDirection: 'row', backgroundColor: 'white', marginHorizontal: 20, borderRadius: 25, padding: 5, marginTop: 10, elevation: 2 },
     tabButton: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 20 },
     activeTab: { backgroundColor: '#9E5F3B' },

@@ -3,6 +3,7 @@ import { StyleSheet, Text, View, Image, TouchableOpacity, ScrollView, Platform, 
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // --- IMPORT FONT LANGAR ---
 import { useFonts, Langar_400Regular } from '@expo-google-fonts/langar';
@@ -24,15 +25,66 @@ type RecipeApiItem = {
   difficulty?: string | null;
 };
 
+// Helper function to construct profile picture URL
+const getProfilePictureUrl = (profilePicture: string | null | undefined): string => {
+  if (!profilePicture) {
+    return 'https://i.pinimg.com/736x/8b/16/7a/8b1671af653c2399dd93b952a48740620.jpg';
+  }
+  
+  // If it's already a full URL, return as is
+  if (profilePicture.startsWith('http')) {
+    return profilePicture;
+  }
+  
+  // Construct the storage URL
+  const baseUrl = API_BASE_URL.replace('/api', '');
+  return `${baseUrl}/storage/${profilePicture}`;
+};
+
 export default function HomeScreen() {
   const router = useRouter();
   const [popularFood, setPopularFood] = useState<FoodItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<any>(null);
 
   // --- MEMUAT FONT ---
   const [fontsLoaded] = useFonts({
     'Langar-Regular': Langar_400Regular,
   });
+
+  // Fetch user data
+  useEffect(() => {
+    fetchUserData();
+  }, []);
+
+  async function fetchUserData() {
+    try {
+      const token = await AsyncStorage.getItem('auth_token');
+      
+      if (!token) {
+        return;
+      }
+
+      const url = `${API_BASE_URL}/auth/me`;
+
+      const response = await fetch(url, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setUser(data.data);
+      }
+    } catch (error) {
+      console.log("FETCH USER ERROR:", error);
+    }
+  }
 
   useEffect(() => {
     const fetchPopularFood = async () => {
@@ -133,7 +185,7 @@ export default function HomeScreen() {
             onPress={() => router.push("/profile" as any)}
           >
             <Image 
-              source={{ uri: 'https://i.pinimg.com/736x/8b/16/7a/8b167af653c2399dd93b952a48740620.jpg' }} 
+              source={{ uri: getProfilePictureUrl(user?.profile_picture) }} 
               style={styles.profilePic} 
             />
             <View style={styles.editIconBadge}>
