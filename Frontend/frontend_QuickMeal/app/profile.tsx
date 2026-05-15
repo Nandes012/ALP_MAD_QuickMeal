@@ -1,10 +1,12 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { SafeAreaView, View, Text, Image, TouchableOpacity, StyleSheet, ScrollView, Modal } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // --- IMPORT FONT LANGAR ---
 import { useFonts, Langar_400Regular } from '@expo-google-fonts/langar';
+import { API_BASE_URL } from "@/constants/api";
 
 const colors = {
   cream: "#FFF8EF",
@@ -14,18 +16,96 @@ const colors = {
   lightBox: "#F2EDE4" 
 };
 
+// Helper function to construct profile picture URL
+const getProfilePictureUrl = (profilePicture: string | null | undefined): string => {
+  if (!profilePicture) {
+    return 'https://i.pinimg.com/736x/8b/16/7a/8b167af653c2399dd93b952a48740620.jpg';
+  }
+  
+  // If it's already a full URL, return as is
+  if (profilePicture.startsWith('http')) {
+    return profilePicture;
+  }
+  
+  // Construct the storage URL
+  const baseUrl = API_BASE_URL.replace('/api', '');
+  return `${baseUrl}/storage/${profilePicture}`;
+};
+
 export default function Profile() {
   const router = useRouter();
   
   const [isVIP, setIsVIP] = useState(false);
   const [currentView, setCurrentView] = useState<'main' | 'upgrade' | 'payment'>('main');
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  
+  const [user, setUser] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
   const [fontsLoaded] = useFonts({
     'Langar-Regular': Langar_400Regular,
   });
 
-  if (!fontsLoaded) return null;
+  // Fetch user data from API
+  useEffect(() => {
+    fetchUserData();
+  }, []);
+
+  async function fetchUserData() {
+    try {
+      setLoading(true);
+      
+      // Get token from storage
+      const token = await AsyncStorage.getItem('auth_token');
+      
+      if (!token) {
+        router.replace("/login" as any);
+        return;
+      }
+
+      const url = `${API_BASE_URL}/auth/me`;
+
+      const response = await fetch(url, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
+      });
+
+      const contentType = response.headers.get("content-type") || "";
+      let data: any = null;
+      
+      if (contentType.includes("application/json")) {
+        data = await response.json();
+      } else {
+        console.log("PROFILE FETCH NON-JSON RESPONSE:", response.status);
+        return;
+      }
+
+      console.log("USER DATA:", data);
+
+      if (!response.ok) {
+        console.log("Error fetching user:", data);
+        return;
+      }
+
+      // Set user data
+      setUser(data.data);
+      
+      // Check if VIP
+      if (data.data.is_premium) {
+        setIsVIP(true);
+      }
+
+      setLoading(false);
+
+    } catch (error) {
+      console.log("FETCH USER ERROR:", error);
+      setLoading(false);
+    }
+  }
 
   function Row({ title }: { title: string }) {
     return (
@@ -43,9 +123,12 @@ export default function Profile() {
         <TouchableOpacity onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={28} color="black" />
         </TouchableOpacity>
-        <Text style={styles.username}>St mutmainnah</Text>
+        <Text style={styles.username}>{user?.name || 'Loading...'}</Text>
         <View>
-          <Image source={{ uri: 'https://i.pinimg.com/736x/8b/16/7a/8b167af653c2399dd93b952a48740620.jpg' }} style={styles.smallAvatar} />
+          <Image 
+            source={{ uri: getProfilePictureUrl(user?.profile_picture) }} 
+            style={styles.smallAvatar} 
+          />
           <View style={styles.editBadge}>
               <Ionicons name="pencil" size={8} color="white" />
           </View>
@@ -84,7 +167,10 @@ export default function Profile() {
         </View>
       </View>
 
-      <TouchableOpacity style={styles.logout} onPress={() => router.replace("/login" as any)}>
+      <TouchableOpacity style={styles.logout} onPress={async () => {
+        await AsyncStorage.removeItem('auth_token');
+        router.replace("/login" as any);
+      }}>
         <Ionicons name="log-out-outline" size={24} color="#FF0000" style={{ marginRight: 10 }} />
         <Text style={styles.logoutText}>Logout Akun</Text>
       </TouchableOpacity>

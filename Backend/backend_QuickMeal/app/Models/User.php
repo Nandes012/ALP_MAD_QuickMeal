@@ -51,6 +51,16 @@ class User extends Authenticatable
         ];
     }
 
+    /**
+     * Accessor to provide default profile_picture if null
+     */
+    protected function profilePicture(): \Illuminate\Database\Eloquent\Casts\Attribute
+    {
+        return \Illuminate\Database\Eloquent\Casts\Attribute::make(
+            get: fn ($value) => $value ?? 'profile_pictures/1778642103_person.jpg',
+        );
+    }
+
     public function orders(): HasMany
     {
         return $this->hasMany(Order::class);

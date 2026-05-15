@@ -3,7 +3,24 @@ import { StyleSheet, Text, View, Image, TouchableOpacity, FlatList, StatusBar } 
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from '@/constants/api';
+
+// Helper function to construct profile picture URL
+const getProfilePictureUrl = (profilePicture: string | null | undefined): string => {
+  if (!profilePicture) {
+    return 'https://i.pinimg.com/736x/8b/16/7a/8b167af653c2399dd93b952a48740620.jpg';
+  }
+  
+  // If it's already a full URL, return as is
+  if (profilePicture.startsWith('http')) {
+    return profilePicture;
+  }
+  
+  // Construct the storage URL
+  const baseUrl = API_BASE_URL.replace('/api', '');
+  return `${baseUrl}/storage/${profilePicture}`;
+};
 
 // --- DATA INTERFACE ---
 interface FoodItem {
@@ -52,6 +69,7 @@ export default function ExploreScreen() {
   const [activeTab, setActiveTab] = useState<'Masak' | 'Order'>('Masak');
   const [data, setData] = useState<FoodItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -71,6 +89,40 @@ export default function ExploreScreen() {
     load();
     return () => { mounted = false; };
   }, [activeTab]);
+
+  // Fetch user data
+  useEffect(() => {
+    fetchUserData();
+  }, []);
+
+  async function fetchUserData() {
+    try {
+      const token = await AsyncStorage.getItem('auth_token');
+      
+      if (!token) {
+        return;
+      }
+
+      const url = `${API_BASE_URL}/auth/me`;
+
+      const response = await fetch(url, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setUser(data.data);
+      }
+    } catch (error) {
+      console.log("FETCH USER ERROR:", error);
+    }
+  }
 
   const renderFoodItem = ({ item }: { item: FoodItem }) => (
     <View style={styles.card}>
@@ -147,7 +199,7 @@ export default function ExploreScreen() {
           onPress={() => router.push("/profile" as any)}
         >
           <Image 
-            source={{ uri: 'https://i.pinimg.com/736x/8b/16/7a/8b167af653c2399dd93b952a48740620.jpg' }} 
+            source={{ uri: getProfilePictureUrl(user?.profile_picture) }} 
             style={styles.profileImage} 
           />
           <View style={styles.editIconBadge}>

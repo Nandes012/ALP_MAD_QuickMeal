@@ -46,14 +46,23 @@ class UserController extends Controller
         */
         if ($request->hasFile('profile_picture')) {
 
+            $filename = time() . '_' . $request->file('profile_picture')->getClientOriginalName();
             $path = $request->file('profile_picture')
-                            ->store('profile', 'public');
+                            ->storeAs('profile_pictures', $filename, 'public');
 
             $validated['profile_picture'] = $path;
+        } else {
+            // Use default person.jpg if no picture provided
+            $validated['profile_picture'] = 'profile_pictures/1778642103_person.jpg';
         }
 
         // Create user
         $user = User::create($validated);
+
+        // Ensure profile_picture has a default value if null
+        if (!$user->profile_picture) {
+            $user->profile_picture = 'profile_pictures/1778642103_person.jpg';
+        }
 
         // Create token
         $token = $user->createToken('auth_token')->plainTextToken;
@@ -97,6 +106,11 @@ class UserController extends Controller
             ], 401);
         }
 
+        // Ensure profile_picture has a default value if null
+        if (!$user->profile_picture) {
+            $user->profile_picture = 'profile_pictures/1778642103_person.jpg';
+        }
+
         // Generate token
         $token = $user->createToken('auth_token')->plainTextToken;
 
@@ -113,9 +127,16 @@ class UserController extends Controller
      */
     public function me(Request $request)
     {
+        $user = $request->user();
+        
+        // Ensure profile_picture has a default value if null
+        if (!$user->profile_picture) {
+            $user->profile_picture = 'profile_pictures/1778642103_person.jpg';
+        }
+        
         return response()->json([
             'success' => true,
-            'data' => $request->user()
+            'data' => $user
         ], 200);
     }
 
@@ -156,6 +177,11 @@ class UserController extends Controller
                 'subscriptions'
             ])->find($user->id);
 
+            // Ensure profile_picture has a default value if null
+            if (!$user->profile_picture) {
+                $user->profile_picture = 'profile_pictures/1778642103_person.jpg';
+            }
+
             return response()->json([
                 'success' => true,
                 'data' => $user
@@ -164,6 +190,14 @@ class UserController extends Controller
 
         // Get all users
         $users = User::all();
+        
+        // Ensure all users have a default profile_picture if null
+        $users = $users->map(function($user) {
+            if (!$user->profile_picture) {
+                $user->profile_picture = 'profile_pictures/1778642103_person.jpg';
+            }
+            return $user;
+        });
 
         return response()->json([
             'success' => true,
@@ -182,6 +216,11 @@ class UserController extends Controller
             'recommendations',
             'subscriptions'
         ])->findOrFail($id);
+
+        // Ensure profile_picture has a default value if null
+        if (!$user->profile_picture) {
+            $user->profile_picture = 'profile_pictures/1778642103_person.jpg';
+        }
 
         return response()->json([
             'success' => true,
