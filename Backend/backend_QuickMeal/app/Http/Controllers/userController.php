@@ -355,6 +355,48 @@ if ($request->filled('remove_profile_picture')) {
             'message' => 'User deleted successfully'
         ], 200);
     }
-}
 
-//sss
+    /**
+     * POST /api/profile/update-picture
+     */
+    public function updateProfilePicture(Request $request)
+    {
+        $user = $request->user();
+
+        $validated = $request->validate([
+            'profile_picture' => 'required|image|mimes:jpeg,png,jpg,gif,webp,heic|max:2048',
+        ]);
+
+        /*
+        |--------------------------------------------------------------------------
+        | DELETE OLD PROFILE PICTURE
+        |--------------------------------------------------------------------------
+        */
+        if (
+            $user->profile_picture &&
+            file_exists(storage_path('app/public/' . $user->profile_picture)) &&
+            $user->profile_picture !== 'profile_pictures/1778642103_person.jpg'
+        ) {
+            unlink(storage_path('app/public/' . $user->profile_picture));
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | UPLOAD NEW PROFILE PICTURE
+        |--------------------------------------------------------------------------
+        */
+        if ($request->hasFile('profile_picture')) {
+            $file = $request->file('profile_picture');
+            $filename = time() . '_' . $file->getClientOriginalName();
+            $path = $file->storeAs('profile_pictures', $filename, 'public');
+            $user->profile_picture = $path;
+            $user->save();
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Profile picture updated successfully',
+            'data' => $user
+        ], 200);
+    }
+}
