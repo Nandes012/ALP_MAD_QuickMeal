@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\RecipeController;
 use App\Http\Controllers\OrderController;
+use App\Http\Controllers\IngredientController;
 
 Route::post('/auth/register', [UserController::class, 'register']);
 Route::post('/auth/login', [UserController::class, 'login']);
@@ -18,18 +19,20 @@ Route::get('/orders', [OrderController::class, 'index']);
 Route::get('/orders/{id}', [OrderController::class, 'show']);
 
 Route::middleware('auth:sanctum')->group(function () {
-
     Route::get('/auth/me', [UserController::class, 'me']);
-
     Route::post('/auth/logout', [UserController::class, 'logout']);
-
     Route::put('/user', [UserController::class, 'update']);
-
     Route::post('/profile/update-picture', [UserController::class, 'updateProfilePicture']);
-
     Route::get('/users', [UserController::class, 'index']);
-
     Route::get('/users/{id}', [UserController::class, 'show']);
-
     Route::delete('/users/{id}', [UserController::class, 'destroy']);
 });
+
+//routes for ingredients
+Route::get('/ingredients', [IngredientController::class, 'index']);
+Route::get('/ingredients/{id}', [IngredientController::class, 'show']);
+Route::get('/ingredients', [IngredientController::class, 'index']);
+Route::get('/ingredients/{id}', [IngredientController::class, 'show']);
+Route::post('/ingredients', [IngredientController::class, 'store']);
+Route::put('/ingredients/{id}', [IngredientController::class, 'update']);
+Route::delete('/ingredients/{id}', [IngredientController::class, 'destroy']);
