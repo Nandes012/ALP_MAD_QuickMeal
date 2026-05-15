@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from "react";
-import { SafeAreaView, View, Text, Image, TouchableOpacity, StyleSheet, ScrollView, Modal } from "react-native";
+import { SafeAreaView, View, Text, Image, TouchableOpacity, StyleSheet, ScrollView, Modal, Alert, ActivityIndicator } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as ImagePicker from 'expo-image-picker';
 
 // --- IMPORT FONT LANGAR ---
 import { useFonts, Langar_400Regular } from '@expo-google-fonts/langar';
@@ -38,6 +39,8 @@ export default function Profile() {
   const [isVIP, setIsVIP] = useState(false);
   const [currentView, setCurrentView] = useState<'main' | 'upgrade' | 'payment'>('main');
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [showImagePickerModal, setShowImagePickerModal] = useState(false);
+  const [uploading, setUploading] = useState(false);
   
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -107,6 +110,91 @@ export default function Profile() {
     }
   }
 
+  async function pickImageFromLibrary() {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (!result.canceled) {
+        await uploadProfilePicture(result.assets[0].uri);
+      }
+      setShowImagePickerModal(false);
+    } catch (error) {
+      console.error("Error picking image:", error);
+      Alert.alert("Error", "Failed to pick image");
+    }
+  }
+
+  async function takePhotoWithCamera() {
+    try {
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (!result.canceled) {
+        await uploadProfilePicture(result.assets[0].uri);
+      }
+      setShowImagePickerModal(false);
+    } catch (error) {
+      console.error("Error taking photo:", error);
+      Alert.alert("Error", "Failed to take photo");
+    }
+  }
+
+  async function uploadProfilePicture(imageUri: string) {
+    try {
+      setUploading(true);
+
+      const token = await AsyncStorage.getItem('auth_token');
+      if (!token) {
+        Alert.alert("Error", "No authentication token found");
+        return;
+      }
+
+      // Create FormData for file upload
+      const formData = new FormData();
+      const filename = imageUri.split('/').pop() || 'profile.jpg';
+      const match = /\.(\w+)$/.exec(filename);
+      const type = match ? `image/${match[1]}` : 'image/jpeg';
+
+      formData.append('profile_picture', {
+        uri: imageUri,
+        name: filename,
+        type: type,
+      } as any);
+
+      const response = await fetch(`${API_BASE_URL}/profile/update-picture`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json',
+        },
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        // Update user data with new profile picture
+        setUser({ ...user, profile_picture: data.data?.profile_picture || user.profile_picture });
+        Alert.alert("Success", "Profile picture updated successfully");
+      } else {
+        Alert.alert("Error", data.message || "Failed to update profile picture");
+      }
+    } catch (error) {
+      console.error("Error uploading picture:", error);
+      Alert.alert("Error", "Failed to upload profile picture");
+    } finally {
+      setUploading(false);
+    }
+  }
+
   function Row({ title }: { title: string }) {
     return (
       <TouchableOpacity style={local.row} activeOpacity={0.8}>
@@ -124,7 +212,7 @@ export default function Profile() {
           <Ionicons name="arrow-back" size={28} color="black" />
         </TouchableOpacity>
         <Text style={styles.username}>{user?.name || 'Loading...'}</Text>
-        <View>
+        <TouchableOpacity onPress={() => setShowImagePickerModal(true)}>
           <Image 
             source={{ uri: getProfilePictureUrl(user?.profile_picture) }} 
             style={styles.smallAvatar} 
@@ -132,7 +220,7 @@ export default function Profile() {
           <View style={styles.editBadge}>
               <Ionicons name="pencil" size={8} color="white" />
           </View>
-        </View>
+        </TouchableOpacity>
       </View>
 
       <View style={styles.vipCard}>
@@ -238,6 +326,45 @@ export default function Profile() {
       {currentView === 'upgrade' && renderUpgradeView()}
       {currentView === 'payment' && renderPaymentConfirm()}
 
+      {/* Image Picker Modal */}
+      <Modal visible={showImagePickerModal} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.imagePickerModal}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalHeaderText}>Change Profile Picture</Text>
+              <TouchableOpacity onPress={() => setShowImagePickerModal(false)}>
+                <Ionicons name="close" size={28} color={colors.primary} />
+              </TouchableOpacity>
+            </View>
+
+            {uploading ? (
+              <View style={styles.uploadingContainer}>
+                <ActivityIndicator size="large" color={colors.button} />
+                <Text style={styles.uploadingText}>Uploading...</Text>
+              </View>
+            ) : (
+              <>
+                <TouchableOpacity 
+                  style={styles.optionButton}
+                  onPress={takePhotoWithCamera}
+                >
+                  <Ionicons name="camera" size={32} color={colors.button} />
+                  <Text style={styles.optionText}>Take a Photo</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity 
+                  style={styles.optionButton}
+                  onPress={pickImageFromLibrary}
+                >
+                  <Ionicons name="image" size={32} color={colors.button} />
+                  <Text style={styles.optionText}>Choose from Files</Text>
+                </TouchableOpacity>
+              </>
+            )}
+          </View>
+        </View>
+      </Modal>
+
       <Modal visible={showSuccessModal} transparent animationType="fade">
         <View style={styles.modalOverlay}>
           <TouchableOpacity 
@@ -313,6 +440,13 @@ const styles = StyleSheet.create({
   modalContent: { backgroundColor: colors.button, width: '85%', paddingVertical: 50, paddingHorizontal: 30, borderRadius: 30, alignItems: 'center' },
   modalText: { color: 'white', fontSize: 22, fontWeight: 'bold', textAlign: 'center', marginBottom: 25 },
   modalSubText: { color: 'rgba(255,255,255,0.6)', fontSize: 14 },
+  imagePickerModal: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: colors.cream, borderTopLeftRadius: 25, borderTopRightRadius: 25, paddingTop: 20, paddingHorizontal: 20, paddingBottom: 30 },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 25 },
+  modalHeaderText: { fontSize: 18, fontWeight: 'bold', color: colors.primary },
+  optionButton: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'white', borderRadius: 15, paddingVertical: 18, paddingHorizontal: 20, marginBottom: 12, borderWidth: 1, borderColor: '#ddd' },
+  optionText: { fontSize: 16, fontWeight: '600', color: colors.primary, marginLeft: 15 },
+  uploadingContainer: { alignItems: 'center', justifyContent: 'center', paddingVertical: 40 },
+  uploadingText: { marginTop: 15, fontSize: 16, color: colors.primary, fontWeight: '600' },
 });
 
 const local = StyleSheet.create({
