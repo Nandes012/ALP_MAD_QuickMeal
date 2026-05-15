@@ -35,5 +35,7 @@ class DatabaseSeeder extends Seeder
         $this->call(RecipeToolSeeder::class);
         // Seed orders for testing
         $this->call(OrderSeeder::class);
+                // Seed locations
+        $this->call(LocationSeeder::class);
     }
 }
