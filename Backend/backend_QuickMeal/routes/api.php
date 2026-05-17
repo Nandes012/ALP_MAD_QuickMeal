@@ -7,6 +7,7 @@ use App\Http\Controllers\OrderController;
 use App\Http\Controllers\IngredientController;
 use App\Http\Controllers\LocationController;
 
+
 Route::post('/auth/register', [UserController::class, 'register']);
 Route::post('/auth/login', [UserController::class, 'login']);
 
@@ -44,3 +45,4 @@ Route::get('/locations/{id}', [LocationController::class, 'show']);
 Route::post('/locations', [LocationController::class, 'store']);
 Route::put('/locations/{id}', [LocationController::class, 'update']);
 Route::delete('/locations/{id}', [LocationController::class, 'destroy']);
+
