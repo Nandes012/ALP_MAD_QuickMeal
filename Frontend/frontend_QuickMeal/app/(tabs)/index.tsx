@@ -1,178 +1,186 @@
 import React from 'react';
-import { StyleSheet, Text, View, Image, TouchableOpacity, ScrollView, Platform } from 'react-native';
+import { StyleSheet, Text, View, Image, TouchableOpacity, ScrollView, Platform, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-
-// --- IMPORT FONT LANGAR ---
+import CustomNavbar from '../../components/CustomNavbar';
 import { useFonts, Langar_400Regular } from '@expo-google-fonts/langar';
 
-interface FoodItem {
-  id: string;
-  name: string;
-  rating: string;
-  desc: string;
-  imageUri: string;
-}
+const { width } = Dimensions.get('window');
 
-const POPULAR_FOOD: FoodItem[] = [
-  { id: '1', name: 'Ayam Goreng', rating: '4.9', desc: 'Kelezatan bumbu rempah yang meresap hingga ke tulang.', imageUri: 'https://images.unsplash.com/photo-1626082927389-6cd097cdc6ec?q=80&w=500&auto=format&fit=crop' },
-  { id: '2', name: 'Ayam Bakar', rating: '4.8', desc: 'Sentuhan kecap manis dan aroma bakaran yang menggoda.', imageUri: 'https://images.unsplash.com/photo-1598515214211-89d3c73ae83b?q=80&w=500&auto=format&fit=crop' },
-  { id: '3', name: 'Nasi Goreng', rating: '4.9', desc: 'Nasi goreng spesial dengan topping telur dan acar segar.', imageUri: 'https://images.unsplash.com/photo-1603133872878-684f208fb84b?q=80&w=500&auto=format&fit=crop' },
-  { id: '4', name: 'Nasi Kuning', rating: '4.7', desc: 'Gurihnya santan dipadu dengan lauk lengkap khas nusantara.', imageUri: 'https://i.pinimg.com/736x/15/67/4c/15674cf0afcc0d0aa09b01840eec90af.jpg' },
-  { id: '5', name: 'Sate Ayam', rating: '4.9', desc: 'Potongan daging empuk dengan siraman saus kacang kental.', imageUri: 'https://i.pinimg.com/736x/a6/8e/c5/a68ec592ddcfad79a8480821a5ab6320.jpg' },
+// =========================================================
+// 1. PUSAT PENGATURAN LINK GAMBAR (Ubah di sini saja)
+// =========================================================
+const MY_IMAGES = {
+  profile: 'https://i.pinimg.com/736x/8b/16/7a/8b167af653c2399dd93b952a48740620.jpg',
+  chefIcon: 'https://cdn-icons-png.flaticon.com/512/1000/1000390.png',
+  
+  // Link untuk Section Rekomendasi (Card Cokelat Horizontal)
+  resep1: 'https://i.pinimg.com/736x/b8/2b/49/b82b494cdd3649fa11d52947a476b9f6.jpg',
+  resep2: 'https://i.pinimg.com/736x/e9/a2/8d/e9a28dce703b11b2e1039f74ed9e1b8f.jpg',
+  resep3: 'https://i.pinimg.com/1200x/a6/e5/72/a6e5726b06f614acbf383d08e70cb6d7.jpg',
+  resep4: 'https://i.pinimg.com/736x/00/47/b9/0047b9bbf29995b597973ac16d3cdb23.jpg',
+  
+  // Link untuk Section Sudah Dilihat (Card Vertikal Grid)
+  grid1: 'https://i.pinimg.com/1200x/90/b7/3f/90b73fc7d86afbb17546faeb75fa8135.jpg', // Gambar Nasi Goreng
+  grid2: 'https://i.pinimg.com/1200x/e2/33/70/e23370da5d06c784c091e8c3a56c9171.jpg', // Gambar Tumis Kangkung
+  grid3: 'https://i.pinimg.com/736x/71/48/60/714860a183bf15c2e9b1608ac0891911.jpg', // Gambar Tempe Goreng
+  grid4: 'https://i.pinimg.com/736x/23/7c/56/237c5609e4a815edc581085f8a8f05e6.jpg', // Gambar Martabak
+};
+
+// Data mengambil link dinamis dari objek MY_IMAGES di atas
+const RECOMMENDATIONS = [
+  { id: 'r1', name: 'Telur Kecap', desc: 'Kelezatan yang bikin balik lagi.', image: MY_IMAGES.resep1 },
+  { id: 'r2', name: 'Sosi Telur Ala Anak Kos', desc: 'Nikmat menggugah selera.', image: MY_IMAGES.resep2 },
+  { id: 'r3', name: 'Tahu Crispy', desc: 'Kriuk di Luar, Lumer di Lidah.', image: MY_IMAGES.resep3 },
+  { id: 'r4', name: 'Udang Goreng', desc: 'Garing di luar, lembut di dalam.', image: MY_IMAGES.resep4 },
+];
+
+const RECENT_RECIPES = [
+  { id: '1', name: 'Nasi Goreng Telur Orak Arik', image: MY_IMAGES.grid1 },
+  { id: '2', name: 'Tumis Kangkung', image: MY_IMAGES.grid2 },
+  { id: '3', name: 'Tempe Goreng Kriuk', image: MY_IMAGES.grid3 },
+  { id: '4', name: 'Martabak Mie Telor', image: MY_IMAGES.grid4 },
 ];
 
 export default function HomeScreen() {
   const router = useRouter();
+  const [fontsLoaded] = useFonts({ 'Langar-Regular': Langar_400Regular });
 
-  // --- MEMUAT FONT ---
-  const [fontsLoaded] = useFonts({
-    'Langar-Regular': Langar_400Regular,
-  });
-
-  if (!fontsLoaded) {
-    return null;
-  }
-
-  const renderFoodCard = (item: FoodItem) => (
-    <TouchableOpacity 
-      key={item.id} 
-      style={styles.card} 
-      activeOpacity={0.9}
-      // Tambahan: Klik area kartu juga bisa masuk ke detail
-      onPress={() => router.push({
-        pathname: "/detail_order",
-        params: { name: item.name, rating: item.rating, image: item.imageUri }
-      })}
-    >
-      <View style={styles.cardContent}>
-        <View style={styles.textContainer}>
-          <View style={styles.titleRow}>
-            <Text style={styles.foodName}>{item.name}</Text>
-            <View style={styles.ratingContainer}>
-              <Ionicons name="star" size={16} color="#FFD700" />
-              <Text style={styles.ratingText}>{item.rating}</Text>
-            </View>
-          </View>
-          <Text style={styles.foodDesc} numberOfLines={2}>{item.desc}</Text>
-          
-          {/* PERUBAHAN DI SINI: Navigasi saat klik Lihat Detail */}
-          <TouchableOpacity 
-            onPress={() => router.push({
-              pathname: "/detail_order",
-              params: { name: item.name, rating: item.rating, image: item.imageUri }
-            })}
-          >
-            <Text style={styles.detailText}>Lihat Detail</Text>
-          </TouchableOpacity>
-        </View>
-        <Image source={{ uri: item.imageUri }} style={styles.foodImage} />
-      </View>
-    </TouchableOpacity>
-  );
+  if (!fontsLoaded) return null;
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false}>
-        
-        <View style={styles.headerBar}>
-          <Text style={styles.logoText}>QuickMeal</Text>
+    <View style={styles.container}>
+      <SafeAreaView style={{ flex: 1 }} edges={['top']}>
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
           
-          <TouchableOpacity 
-            style={styles.profileButton} 
-            onPress={() => router.push("/profile" as any)}
-          >
-            <Image 
-              source={{ uri: 'https://i.pinimg.com/736x/8b/16/7a/8b167af653c2399dd93b952a48740620.jpg' }} 
-              style={styles.profilePic} 
-            />
-            <View style={styles.editIconBadge}>
-               <Ionicons name="pencil" size={8} color="white" />
+          {/* HEADER */}
+          <View style={styles.headerHalo}>
+            <View style={styles.headerTextCol}>
+               <View style={styles.haloRow}>
+                  <Image source={{ uri: MY_IMAGES.chefIcon }} style={styles.chefHat} />
+                  <Text style={styles.haloTitle}>Halo,</Text>
+               </View>
+               <Text style={styles.haloSubTitle}>Mau masak apa hari ini?</Text>
             </View>
-          </TouchableOpacity>
-        </View>
+            <TouchableOpacity onPress={() => router.push("/profile")}>
+              <View style={styles.profileContainer}>
+                <Image source={{ uri: MY_IMAGES.profile }} style={styles.profilePic} />
+                <View style={styles.editBadge}><Ionicons name="pencil" size={8} color="white" /></View>
+              </View>
+            </TouchableOpacity>
+          </View>
 
-        <View style={styles.bannerContainer}>
-          <Image 
-            source={{ uri: 'https://img.freepik.com/free-photo/top-view-circular-food-frame_23-2148723447.jpg' }} 
-            style={styles.bannerImage}
-            resizeMode="cover"
-          />
-        </View>
+          {/* SECTION: REKOMENDASI (HORIZONTAL) */}
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Rekomendasi buat kamu hari ini</Text>
+          </View>
+          
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false} 
+            contentContainerStyle={styles.horizontalScroll}
+          >
+            {RECOMMENDATIONS.map((item) => (
+              <TouchableOpacity key={item.id} style={styles.bannerCard} activeOpacity={0.9} onPress={() => router.push("/detail_resep")}>
+                <View style={styles.bannerTextContent}>
+                  <Text style={styles.bannerFoodName}>{item.name}</Text>
+                  <Text style={styles.bannerFoodDesc} numberOfLines={2}>{item.desc}</Text>
+                  <View style={styles.btnLihatResepSmall}>
+                    <Text style={styles.btnResepText}>Lihat Resep</Text>
+                  </View>
+                </View>
+                <Image source={{ uri: item.image }} style={styles.bannerImage} />
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
 
-        <View style={styles.sectionTitleContainer}>
-          <Text style={styles.sectionTitle}>Makanan Populer</Text>
-        </View>
+          {/* SECTION: RESEP DILIHAT (GRID VERTICAL KINI DENGAN GAMBAR NYATA) */}
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Resep Yang Sudah di Lihat</Text>
+          </View>
 
-        <View style={styles.listContainer}>
-          {POPULAR_FOOD.map((item) => renderFoodCard(item))}
-        </View>
-        
-        <View style={{ height: 120 }} />
-      </ScrollView>
-    </SafeAreaView>
+          <View style={styles.gridContainer}>
+            {RECENT_RECIPES.map((item) => (
+              <TouchableOpacity key={item.id} style={styles.gridCard} onPress={() => router.push("/detail_resep")}>
+                {/* Gambar diletakkan di luar overlay teks agar posisinya mutlak di separuh atas card cokelat */}
+                <Image source={{ uri: item.image }} style={styles.gridImage} />
+                <View style={styles.gridOverlay}>
+                  <Text style={styles.gridFoodName} numberOfLines={2}>{item.name}</Text>
+                  <View style={styles.btnLihatResepGrid}>
+                     <Text style={styles.btnResepTextSmall}>Lihat Resep</Text>
+                  </View>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+        </ScrollView>
+      </SafeAreaView>
+
+      <CustomNavbar />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FFF8EF' },
-  headerBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
+  
+  // Header Style
+  headerHalo: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: 10 },
+  headerTextCol: { flex: 1 },
+  haloRow: { flexDirection: 'row', alignItems: 'center' },
+  chefHat: { width: 35, height: 35, marginRight: 8 },
+  haloTitle: { fontSize: 28, fontFamily: 'Langar-Regular', color: '#9E5F3B' },
+  haloSubTitle: { fontSize: 16, color: '#9E5F3B', marginTop: -5, opacity: 0.6 },
+  profileContainer: { position: 'relative' },
+  profilePic: { width: 50, height: 50, borderRadius: 25, borderWidth: 1, borderColor: '#9E5F3B' },
+  editBadge: { position: 'absolute', right: 0, bottom: 0, backgroundColor: '#5b2f20', borderRadius: 10, padding: 3 },
+
+  // Section Title Style
+  sectionHeader: { paddingHorizontal: 20, marginTop: 25, marginBottom: 15 },
+  sectionTitle: { fontSize: 18, fontWeight: 'bold', color: '#9E5F3B', fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif' },
+
+  // Rekomendasi Horizontal
+  horizontalScroll: { paddingLeft: 20, paddingRight: 5 },
+  bannerCard: { 
+    backgroundColor: '#9E5F3B', 
+    marginRight: 15, 
+    borderRadius: 25, 
+    flexDirection: 'row', 
+    padding: 15, 
+    alignItems: 'center', 
+    width: width * 0.82, 
+    height: 150 
   },
-  logoText: { 
-    fontSize: 28, 
-    color: '#9E5F3B', 
-    fontFamily: 'Langar-Regular', 
+  bannerTextContent: { flex: 1, paddingRight: 10 },
+  bannerFoodName: { color: 'white', fontSize: 20, fontWeight: 'bold' },
+  bannerFoodDesc: { color: 'white', fontSize: 12, marginVertical: 6, opacity: 0.9 },
+  bannerImage: { width: 100, height: 100, borderRadius: 18, resizeMode: 'cover' },
+  btnLihatResepSmall: { backgroundColor: 'rgba(255,255,255,0.25)', paddingVertical: 6, paddingHorizontal: 12, borderRadius: 15, alignSelf: 'flex-start' },
+  btnResepText: { color: 'white', fontSize: 11, fontWeight: 'bold' },
+
+  // Grid Style (Perbaikan struktur tata letak gambar & container)
+  gridContainer: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 15, justifyContent: 'space-between' },
+  gridCard: { 
+    width: '47%', 
+    height: 250, // Ditinggikan sedikit agar teks resep panjang tidak menumpuk tombol
+    backgroundColor: '#9E5F3B', 
+    borderRadius: 25, 
+    marginBottom: 15, 
+    overflow: 'hidden' 
   },
-  profileButton: { position: 'relative' },
-  profilePic: { 
-    width: 40, 
-    height: 40, 
-    borderRadius: 20, 
-    borderWidth: 1, 
-    borderColor: '#5b2f20' 
+  gridImage: { 
+    width: '100%', 
+    height: '52%', // Rasio proporsional agar memotong sudut atas dengan rapi sesuai gambar asli
+    resizeMode: 'cover' 
   },
-  editIconBadge: { 
-    position: 'absolute', 
-    right: -2, 
-    bottom: -2, 
-    backgroundColor: '#5b2f20', 
-    borderRadius: 10, 
-    padding: 2 
+  gridOverlay: { 
+    padding: 12, 
+    flex: 1, 
+    justifyContent: 'space-between' 
   },
-  bannerContainer: { width: '100%', height: 180 },
-  bannerImage: { width: '100%', height: '100%' },
-  sectionTitleContainer: { paddingHorizontal: 20, marginTop: 25, marginBottom: 15 },
-  sectionTitle: { 
-    fontSize: 22, 
-    fontWeight: 'bold', 
-    color: '#9E5F3B', 
-    fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif' 
-  },
-  listContainer: { paddingHorizontal: 20 },
-  card: {
-    backgroundColor: '#9E5F3B',
-    borderRadius: 25,
-    marginBottom: 15,
-    padding: 18,
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-  },
-  cardContent: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  textContainer: { flex: 1, paddingRight: 12 },
-  titleRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 6 },
-  foodName: { color: 'white', fontSize: 18, fontWeight: 'bold', marginRight: 10 },
-  ratingContainer: { flexDirection: 'row', alignItems: 'center' },
-  ratingText: { color: 'white', fontSize: 14, marginLeft: 4, fontWeight: '600' },
-  foodDesc: { color: 'white', fontSize: 13, marginBottom: 10, opacity: 0.9, lineHeight: 18 },
-  detailText: { color: 'white', fontSize: 13, textDecorationLine: 'underline', fontWeight: '500' },
-  foodImage: { width: 90, height: 90, borderRadius: 15, backgroundColor: '#eee' },
+  gridFoodName: { color: 'white', fontSize: 14, fontWeight: 'bold', lineHeight: 18 },
+  btnLihatResepGrid: { backgroundColor: 'rgba(255,255,255,0.2)', paddingVertical: 5, paddingHorizontal: 10, borderRadius: 10, alignSelf: 'flex-start' },
+  btnResepTextSmall: { color: 'white', fontSize: 10, fontWeight: 'bold' },
 });

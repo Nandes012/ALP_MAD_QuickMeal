@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, View, Image, FlatList, TouchableOpacity, ImageBackground, StatusBar } from 'react-native';
+import { StyleSheet, Text, View, Image, FlatList, TouchableOpacity, StatusBar, Platform, ImageBackground } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -7,23 +7,22 @@ import { useRouter } from 'expo-router';
 interface ResepItem {
   id: string;
   title: string;
-  menu?: string;
   price: string;
   time: string;
   image: string;
 }
 
+// Data Array untuk memudahkan kamu mengubah Title, Harga, Waktu, dan Gambar Resep sendiri
 const TOP_RECS: ResepItem[] = [
-  { id: 't1', title: 'Resep Spesial 1', menu: 'Nasi goreng', price: '25.000', time: '15 - 20 Menit', image: 'https://i.pinimg.com/736x/11/a0/8f/11a08f16b0beaa1eefdb30583f1da8f6.jpg' },
-  { id: 't2', title: 'Resep Spesial 2', menu: 'Ayam kremas', price: '25.000', time: '15 - 20 Menit', image: 'https://i.pinimg.com/736x/02/06/01/020601302dedab7013734a652062966d.jpg' },
-  { id: 't3', title: 'Resep Spesial 3', menu: 'Burger Spaicy', price: '25.000', time: '15 - 20 Menit', image: 'https://i.pinimg.com/736x/38/bb/96/38bb963a9c08bc4b4894b98b9d5ff32c.jpg' },
+  { id: 't1', title: 'Resep Nasi Goreng Orak Arik', price: '25.000', time: '20 Menit', image: 'https://i.pinimg.com/1200x/9a/f6/9f/9af69fd227aa680e75b2bdd6404162c8.jpg' },
+  { id: 't2', title: 'Resep Telur Kecap', price: '25.000', time: '10 Menit', image: 'https://i.pinimg.com/736x/78/c0/8b/78c08ba3ed2d852a4e535fe7bc1e7aae.jpg' },
+  { id: 't3', title: 'Resep Tempe Goreng Kriuk', price: '25.000', time: '20 Menit', image: 'https://i.pinimg.com/736x/71/48/60/714860a183bf15c2e9b1608ac0891911.jpg' },
 ];
 
 const OTHER_RECS: ResepItem[] = [
-  { id: 'o1', title: 'Resep Ayam Crispy', price: '25.000', time: '15-20 Min', image: 'https://i.pinimg.com/736x/5b/d5/05/5bd505f837ab3aa00ac51eea9ce3c5a4.jpg' },
-  { id: 'o2', title: 'Resep Pisang Goreng', price: '25.000', time: '15-20 Min', image: 'https://i.pinimg.com/736x/a9/ee/b1/a9eeb17125f76fe28397bdb5073a9026.jpg' },
-  { id: 'o3', title: 'Resep Bakwan', price: '25.000', time: '15-20 Min', image: 'https://i.pinimg.com/1200x/0b/58/23/0b582305b2368e3f1e4e60a3f90da4b9.jpg' },
-  { id: 'o4', title: 'Resep Tempe Mendoan', price: '15.000', time: '10-15 Min', image: 'https://i.pinimg.com/736x/41/58/7b/41587be549c3e4ddda64cc86b69204cd.jpg' },
+  { id: 'o1', title: 'Resep Ayam Crispy', price: '25.000', time: '20 Menit', image: 'https://i.pinimg.com/1200x/13/f2/6e/13f26ed3347cc08c913d74d61456ae35.jpg' },
+  { id: 'o2', title: 'Resep Pisang Goreng', price: '25.000', time: '20 Menit', image: 'https://i.pinimg.com/736x/a9/ee/b1/a9eeb17125f76fe28397bdb5073a9026.jpg' },
+  { id: 'o3', title: 'Resep Bakwan', price: '25.000', time: '20 Menit', image: 'https://i.pinimg.com/736x/fb/d8/4c/fbd84cc9243979932bfef630eb1f1cb5.jpg' },
 ];
 
 export default function HasilRecResepScreen() {
@@ -33,42 +32,51 @@ export default function HasilRecResepScreen() {
     <TouchableOpacity 
       key={item.id} 
       style={styles.card}
-      activeOpacity={0.8}
+      activeOpacity={0.85}
       onPress={() => router.push({
         pathname: '/detail_resep',
-        params: { 
-          name: item.menu || item.title, 
-          imageUrl: item.image, // Mengirim URL gambar
-          price: item.price,
-          time: item.time
-        }
+        params: { name: item.title, imageUrl: item.image, price: item.price }
       })}
     >
       <Image source={{ uri: item.image }} style={styles.cardImage} resizeMode="cover" />
       <View style={styles.cardInfo}>
         <Text style={styles.cardTitle}>{item.title}</Text>
-        {item.menu && <Text style={styles.cardMenu}>{item.menu}</Text>}
+        
         <View style={styles.cardRow}>
-          <Text style={styles.cardPrice}>Rp. {item.price}</Text>
+          {/* Menggunakan simbol dollar pudar sesuai tampilan mockup asli kamu */}
+          <Text style={styles.cardPrice}>$ Rp. {item.price}</Text>
           <View style={styles.timeRow}>
-            <Ionicons name="time-outline" size={14} color="white" />
+            <Ionicons name="time-outline" size={14} color="rgba(255, 255, 255, 0.8)" />
             <Text style={styles.cardTime}>{item.time}</Text>
           </View>
         </View>
-        <Text style={styles.detailText}>Lihat Detail</Text>
+
+        <Text style={styles.detailText}>Lihat Resep</Text>
       </View>
     </TouchableOpacity>
   );
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" />
-      <ImageBackground source={require('../assets/images/cook.png')} style={styles.backgroundImage}>
-        <SafeAreaView style={styles.overlay} edges={['top']}>
-          <View style={styles.header}>
-            <Text style={styles.headerTitle}>Kamu bisa masak!!!</Text>
-            <Text style={styles.headerSubtitle}>Berdasarkan waktu, budget & bahan kamu, kami rekomendasikan masak sendiri</Text>
+      <StatusBar barStyle="light-content" backgroundColor="#9E5F3B" />
+      
+      {/* 1. BAGIAN BACKGROUND YANG BISA KAMU UBAH SENDIRI JALURNYA */}
+      <ImageBackground 
+        source={require('../assets/images/cook.png')} // Silakan ganti nama file gambar latar belakang di sini
+        style={styles.backgroundImage}
+        resizeMode="cover"
+      >
+        {/* Overlay transparan tipis krem agar teks/konten di atas gambar latar belakang tetap terbaca jelas */}
+        <View style={styles.darkOverlay}>
+          
+          {/* HEADER COKELAT SOLID */}
+          <View style={styles.headerContainer}>
+            <Text style={styles.headerSubtitle}>
+              Berdasarkan waktu, budget & bahan kamu, kami rekomendasikan masak sendiri
+            </Text>
           </View>
+          
+          {/* DAFTAR KONTEN */}
           <FlatList
             data={TOP_RECS}
             keyExtractor={(item) => item.id}
@@ -77,13 +85,37 @@ export default function HasilRecResepScreen() {
             showsVerticalScrollIndicator={false}
             ListHeaderComponent={<Text style={styles.sectionTitle}>Rekomendasi Terbaik</Text>}
             ListFooterComponent={
-              <View style={{ marginTop: 20 }}>
+              <View style={{ marginTop: 10 }}>
                 <Text style={styles.sectionTitle}>Pilihan Lainnya</Text>
                 {OTHER_RECS.map((item) => renderCard(item))}
               </View>
             }
           />
-        </SafeAreaView>
+
+          {/* --- CUSTOM NAVBAR --- */}
+          <View style={styles.navbarContainer}>
+            <View style={styles.navbar}>
+              <TouchableOpacity style={styles.navItem} onPress={() => router.push('/')}>
+                <Ionicons name="home-outline" size={24} color="white" />
+                <Text style={styles.navText}>Home</Text>
+              </TouchableOpacity>
+
+              {/* Tombol Tengah Bulat Menembus Batas */}
+              <View style={styles.centerIconWrapper}>
+                <TouchableOpacity style={styles.centerIconBg} onPress={() => router.push('/food_rec')}>
+                  <Ionicons name="search" size={28} color="white" />
+                </TouchableOpacity>
+                <Text style={styles.navTextCenter}>Get Food Rec</Text>
+              </View>
+
+              <TouchableOpacity style={styles.navItem} onPress={() => router.push('/explore')}>
+                <Ionicons name="file-tray-full-outline" size={24} color="white" />
+                <Text style={styles.navText}>List</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+        </View>
       </ImageBackground>
     </View>
   );
@@ -92,20 +124,111 @@ export default function HasilRecResepScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   backgroundImage: { flex: 1, width: '100%', height: '100%' },
-  overlay: { flex: 1, backgroundColor: 'rgba(252, 248, 245, 0.6)' },
-  header: { paddingVertical: 25, alignItems: 'center', paddingHorizontal: 20 },
-  headerTitle: { color: '#5b2f20', fontSize: 24, fontWeight: 'bold', textAlign: 'center' },
-  headerSubtitle: { color: '#5b2f20', fontSize: 12, textAlign: 'center', marginTop: 8 },
-  listContent: { padding: 20, paddingBottom: 100 },
-  sectionTitle: { fontSize: 18, fontWeight: 'bold', color: '#9E5F3B', marginBottom: 15 },
-  card: { backgroundColor: '#9E5F3B', borderRadius: 15, flexDirection: 'row', padding: 12, marginBottom: 15, alignItems: 'center', elevation: 3 },
-  cardImage: { width: 80, height: 80, borderRadius: 12, backgroundColor: '#ddd' },
+  darkOverlay: { flex: 1, backgroundColor: 'rgba(255, 248, 239, 0.4)' }, // Mengatur kepekatan background (ubah 0.4 jika ingin lebih transparan/gelap)
+  headerContainer: { 
+    backgroundColor: '#9E5F3B', 
+    paddingTop: Platform.OS === 'ios' ? 60 : 40, 
+    paddingBottom: 25, 
+    paddingHorizontal: 30,
+    alignItems: 'center'
+  },
+  headerSubtitle: { 
+    color: 'white', 
+    fontSize: 14, 
+    fontWeight: '600',
+    textAlign: 'center', 
+    lineHeight: 20 
+  },
+  listContent: { 
+    paddingHorizontal: 25, 
+    paddingTop: 20,
+    paddingBottom: 110 // Mencegah konten tertutup oleh bar navigasi bawah
+  },
+  sectionTitle: { 
+    fontSize: 16, 
+    fontWeight: 'bold', 
+    color: '#8D5B3E', 
+    marginBottom: 15,
+    fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif'
+  },
+  card: { 
+    backgroundColor: '#9E5F3B', 
+    borderRadius: 15, 
+    flexDirection: 'row', 
+    padding: 12, 
+    marginBottom: 15, 
+    alignItems: 'center',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 1.5,
+  },
+  cardImage: { width: 75, height: 75, borderRadius: 12, backgroundColor: '#EAEAEA' },
   cardInfo: { flex: 1, marginLeft: 15 },
-  cardTitle: { color: 'white', fontSize: 15, fontWeight: 'bold' },
-  cardMenu: { color: 'white', fontSize: 13, marginTop: 2 },
-  cardRow: { flexDirection: 'row', alignItems: 'center', marginTop: 8 },
-  cardPrice: { color: 'white', fontSize: 12, fontWeight: '600', marginRight: 15 },
+  cardTitle: { color: 'white', fontSize: 14, fontWeight: 'bold' },
+  cardRow: { flexDirection: 'row', alignItems: 'center', marginTop: 5 },
+  cardPrice: { color: 'rgba(255, 255, 255, 0.9)', fontSize: 12, fontWeight: '500', marginRight: 20 },
   timeRow: { flexDirection: 'row', alignItems: 'center' },
-  cardTime: { color: 'white', fontSize: 11, marginLeft: 4 },
-  detailText: { color: 'white', fontSize: 11, textDecorationLine: 'underline', marginTop: 8 },
+  cardTime: { color: 'rgba(255, 255, 255, 0.9)', fontSize: 12, marginLeft: 4 },
+  detailText: { color: 'white', fontSize: 12, textDecorationLine: 'underline', marginTop: 6, fontWeight: '500' },
+  
+  // --- BOTTOM FIXED NAVBAR STYLES ---
+  navbarContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'transparent',
+  },
+  navbar: {
+    flexDirection: 'row',
+    backgroundColor: '#9E5F3B',
+    height: 65,
+    borderTopLeftRadius: 25,
+    borderTopRightRadius: 25,
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    paddingBottom: Platform.OS === 'ios' ? 10 : 0,
+  },
+  navItem: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    flex: 1,
+    height: '100%',
+  },
+  centerIconWrapper: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    flex: 1,
+    position: 'relative',
+  },
+  centerIconBg: {
+    backgroundColor: '#8D5B3E',
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 4,
+    borderColor: '#FFF8EF', // Border luar tombol mengikuti warna dasar krem proyekmu
+    marginTop: -35, 
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 3,
+  },
+  navText: {
+    fontSize: 10,
+    marginTop: 4,
+    color: 'white',
+    fontWeight: '500',
+  },
+  navTextCenter: {
+    fontSize: 10,
+    color: 'white',
+    marginTop: 2,
+    fontWeight: '600',
+  }
 });

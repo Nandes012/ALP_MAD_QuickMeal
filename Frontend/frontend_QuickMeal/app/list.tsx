@@ -1,209 +1,283 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, View, Image, TouchableOpacity, FlatList, StatusBar } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { StyleSheet, Text, View, Image, TouchableOpacity, FlatList, StatusBar, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 
-// --- IMPORT FONT LANGAR ---
-import { useFonts, Langar_400Regular } from '@expo-google-fonts/langar';
+// Import CustomNavbar resmi
+import CustomNavbar from '../components/CustomNavbar';
 
-// 1. Perbaikan Interface (Samakan nama property dengan data)
 interface FoodItem {
   id: string;
   name: string;
   price: string;
-  imageUri: string; // Gunakan imageUri secara konsisten
-  rating?: string;
-  ingredients?: string[];
-  time?: string; // Tambahkan opsional time untuk detail resep
+  imageUri: string;
 }
 
-// 2. Data Dummy (Pastikan property name sesuai interface)
+// 1. DATA UNTUK TAB MASAK (9 Item)
 const MASAK_DATA: FoodItem[] = [
   { 
-    id: '1', 
-    name: 'Ayam Bakar', 
+    id: 'm1', 
+    name: 'Indomie Goreng Nugget', 
     price: '25.000', 
-    time: '45 Menit',
-    imageUri: 'https://i.pinimg.com/1200x/b5/0e/9b/b50e9babe23daade5751dcd7423f91ca.jpg',
-    ingredients: ['1/2 kg Ayam', 'Kecap Manis', 'Bawang Merah & Putih', 'Lengkuas', 'Serai', 'Garam & Gula']
+    imageUri: 'https://i.pinimg.com/736x/4c/a7/9b/4ca79b5be9d75d72916045b5798112f8.jpg' 
   },
   { 
-    id: '2', 
-    name: 'Ayam Goreng', 
+    id: 'm2', 
+    name: 'Ayam Goreng Kecap', 
     price: '28.000', 
-    time: '30 Menit',
-    imageUri: 'https://i.pinimg.com/736x/02/06/01/020601302dedab7013734a652062966d.jpg',
-    ingredients: ['1/2 kg Ayam', 'Tepung Bumbu', 'Bawang Putih', 'Ketumbar', 'Kunyit', 'Minyak Goreng']
+    imageUri: 'https://i.pinimg.com/736x/3d/cc/04/3dcc04f4373bbcb7cef3dc1beaf199ca.jpg' 
   },
   { 
-    id: '3', 
-    name: 'Burger Spaicy', 
+    id: 'm3', 
+    name: 'Sayur Bening', 
     price: '21.000', 
-    time: '15 Menit',
-    imageUri: 'https://i.pinimg.com/736x/38/bb/96/38bb963a9c08bc4b4894b98b9d5ff32c.jpg',
-    ingredients: ['Roti Burger', 'Daging Sapi (Patty)', 'Saus Sambal Ekstra Hot', 'Selada', 'Keju Slice', 'Mayonaise']
+    imageUri: 'https://i.pinimg.com/736x/af/1c/30/af1c300d688e07bc32b7caf498d65748.jpg' 
   },
   { 
-    id: '4', 
-    name: 'Spaghetti', 
+    id: 'm4', 
+    name: 'Ikan Goreng Tepung', 
     price: '30.000', 
-    time: '20 Menit',
-    imageUri: 'https://i.pinimg.com/1200x/68/4c/a1/684ca1498560c84097bebc3805da551b.jpg',
-    ingredients: ['Pasta Spaghetti', 'Saus Bolognese', 'Daging Cincang', 'Keju Parmesan', 'Oregano', 'Minyak Zaitun']
+    imageUri: 'https://i.pinimg.com/736x/2b/7b/e4/2b7be4bc75863e123ae36c5d4a5633a7.jpg' 
+  },
+  { 
+    id: 'm5', 
+    name: 'Telur Kecap Special', 
+    price: '15.000', 
+    imageUri: 'https://i.pinimg.com/736x/78/c0/8b/78c08ba3ed2d852a4e535fe7bc1e7aae.jpg' 
+  },
+  { 
+    id: 'm6', 
+    name: 'Tumis Kangkung Belacan', 
+    price: '12.000', 
+    imageUri: 'https://i.pinimg.com/736x/7d/39/8a/7d398aaece5ccbcdc0ce655a3914be50.jpg' 
+  },
+  { 
+    id: 'm7', 
+    name: 'Nasi Goreng Kecap Telur', 
+    price: '20.000', 
+    imageUri: 'https://i.pinimg.com/736x/41/ea/77/41ea77cce5d524f2616c089f2152fd4c.jpg' 
+  },
+  { 
+    id: 'm8', 
+    name: 'Martabak Mie Telor', 
+    price: '14.000', 
+    imageUri: 'https://i.pinimg.com/736x/00/f9/4f/00f94f9245e7daeb143073ecc3174dd7.jpg' 
+  },
+  { 
+    id: 'm9', 
+    name: 'Tahu Cabe Garam', 
+    price: '16.000', 
+    imageUri: 'https://i.pinimg.com/1200x/67/15/ec/6715ecd7877ab4581240839cd1ba3b2f.jpg' 
   },
 ];
 
-const ORDER_DATA: FoodItem[] = [
-  { id: 'o1', name: 'Ayam Bakar', price: '25.000', imageUri: 'https://i.pinimg.com/736x/11/a0/8f/11a08f16b0beaa1eefdb30583f1da8f6.jpg', rating: '4.9' },
-  { id: 'o2', name: 'Ayam Goreng', price: '28.000', imageUri: 'https://i.pinimg.com/736x/02/06/01/020601302dedab7013734a652062966d.jpg', rating: '4.9' },
-  { id: 'o3', name: 'Burger Spaicy', price: '21.000', imageUri: 'https://i.pinimg.com/736x/38/bb/96/38bb963a9c08bc4b4894b98b9d5ff32c.jpg', rating: '4.9' },
-  { id: 'o4', name: 'Spaghetti', price: '30.000', imageUri: 'https://i.pinimg.com/1200x/68/4c/a1/684ca1498560c84097bebc3805da551b.jpg', rating: '4.9' },
+// 2. DATA UNTUK TAB BAHAN (10 Item)
+const BAHAN_DATA: FoodItem[] = [
+  { 
+    id: 'b1', 
+    name: 'Tepung Terigu', 
+    price: '16.000', 
+    imageUri: 'https://i.pinimg.com/736x/fc/c0/ac/fcc0ac8060e5dfeb0de61b226bb59199.jpg' 
+  },
+  { 
+    id: 'b2', 
+    name: 'Telur Ayam', 
+    price: '35.000', 
+    imageUri: 'https://i.pinimg.com/1200x/62/e5/7f/62e57f49df077ed9e7d8c8f0af3caeec.jpg' 
+  },
+  { 
+    id: 'b3', 
+    name: 'Minyak Goreng', 
+    price: '28.900', 
+    imageUri: 'https://i.pinimg.com/736x/38/5a/f1/385af1e0d89a3a7d8dd8488398f95f37.jpg' 
+  },
+  { 
+    id: 'b4', 
+    name: 'Beras Putih', 
+    price: '21.000', 
+    imageUri: 'https://i.pinimg.com/736x/d2/ba/ce/d2bace10f91033f416335a3ccbb753c9.jpg' 
+  },
+  { 
+    id: 'b5', 
+    name: 'Daging Ayam Fillet', 
+    price: '45.000', 
+    imageUri: 'https://i.pinimg.com/1200x/93/c9/7b/93c97b11397b222ac817e839c900e8e2.jpg' 
+  },
+  { 
+    id: 'b6', 
+    name: 'Cabai Rawit Merah', 
+    price: '12.000', 
+    imageUri: 'https://i.pinimg.com/1200x/1d/5a/e2/1d5ae2a0ad24fca7a07df3e9a8cbe55d.jpg' 
+  },
+  { 
+    id: 'b7', 
+    name: 'Bawang Merah', 
+    price: '15.000', 
+    imageUri: 'https://i.pinimg.com/1200x/d0/34/0f/d0340f5da579d87ad1fb51deeee3ea7c.jpg' 
+  },
+  { 
+    id: 'b8', 
+    name: 'Mentega Margarin', 
+    price: '9.500', 
+    imageUri: 'https://i.pinimg.com/736x/22/73/42/227342d7bfce05cc00f240fba87e8a13.jpg' 
+  },
+  { 
+    id: 'b9', 
+    name: 'Kecap Manis', 
+    price: '11.000', 
+    imageUri: 'https://i.pinimg.com/1200x/3f/78/4e/3f784eba5d6814d509ad8cd2fb486fe5.jpg' 
+  },
+  { 
+    id: 'b10', 
+    name: 'Bawang Putih', 
+    price: '11.000', 
+    imageUri: 'https://i.pinimg.com/1200x/5a/b9/be/5ab9be48ddc23379df5d9937285291ed.jpg' 
+  },
 ];
 
 export default function ListScreen() {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<'Masak' | 'Order'>('Masak');
+  const [activeTab, setActiveTab] = useState<'Masak' | 'Bahan'>('Masak');
 
-  const [fontsLoaded] = useFonts({
-    'Langar-Regular': Langar_400Regular,
-  });
+  // Fungsi navigasi yang disatukan agar konsisten di-trigger dari komponen mana pun
+  const handleItemPress = (item: FoodItem) => {
+    // Normalisasi teks untuk menghilangkan potensi spasi ganda yang merusak key database lokal
+    const cleanName = item.name.replace(/\s+/g, ' ').trim();
 
-  if (!fontsLoaded) return null;
+    if (activeTab === 'Masak') {
+      router.push({
+        pathname: '/detail_resep',
+        params: { name: cleanName, imageUrl: item.imageUri }
+      });
+    } else {
+      router.push({
+        pathname: '/detail_bahan',
+        params: { name: cleanName, imageUrl: item.imageUri, price: item.price }
+      });
+    }
+  };
 
   const renderFoodItem = ({ item }: { item: FoodItem }) => (
-    <View style={styles.card}>
+    /* Mengubah View terluar kartu menjadi TouchableOpacity agar seluruh area kartu bisa diklik */
+    <TouchableOpacity 
+      style={styles.card}
+      activeOpacity={0.9}
+      onPress={() => handleItemPress(item)}
+    >
+      {/* Sisi Kiri: Informasi Teks & Tombol */}
       <View style={styles.cardInfo}>
-        <View style={styles.titleRow}>
-          <Text style={styles.foodName}>{item.name}</Text>
-          {activeTab === 'Order' && (
-            <View style={styles.ratingRow}>
-              <Ionicons name="star" size={14} color="#FFD700" />
-              <Text style={styles.ratingText}>{item.rating}</Text>
-            </View>
-          )}
-        </View>
-        <Text style={styles.foodPrice}>RP. {item.price}</Text>
+        <Text style={styles.foodName} numberOfLines={1}>{item.name}</Text>
+        <Text style={styles.foodPrice}>Rp. {item.price}</Text>
         
-        <TouchableOpacity 
-          style={styles.detailButton}
-          onPress={() => {
-            const path = activeTab === 'Masak' ? '/detail_resep' : '/detail_order';
-            const ingredientsString = item.ingredients ? JSON.stringify(item.ingredients) : JSON.stringify([]);
-
-            router.push({ 
-                pathname: path as any, 
-                params: { 
-                  name: item.name, 
-                  imageUrl: encodeURIComponent(item.imageUri), // Encode agar URL aman dikirim
-                  price: item.price,
-                  time: item.time || "25 Menit",
-                  ingredients: ingredientsString 
-                } 
-            });
-          }}
-        >
-          <Text style={styles.detailButtonText}>
-            {activeTab === 'Masak' ? 'Resep' : 'Order Detail'}
+        {/* Tombol visual dipertahankan agar UI tidak berubah, di-redirect ke fungsi yang sama */}
+        <View style={styles.actionButton}>
+          <Text style={styles.actionButtonText}>
+            {activeTab === 'Masak' ? 'Resep' : 'Detail Bahan'}
           </Text>
-        </TouchableOpacity>
+        </View>
       </View>
-      
-      {/* 3. Gunakan item.imageUri sesuai interface */}
-      <Image source={{ uri: item.imageUri }} style={styles.foodImage} />
-    </View>
+
+      {/* Sisi Kanan: Gambar */}
+      <Image source={{ uri: item.imageUri }} style={styles.foodImage} resizeMode="cover" />
+    </TouchableOpacity>
   );
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" />
-      <View style={styles.header}>
+    <View style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor="#FFF8EF" />
+      
+      <SafeAreaView edges={['top']} style={styles.header}>
         <Text style={styles.logoText}>QuickMeal</Text>
-        <TouchableOpacity style={styles.profileButton}>
-          <Image source={{ uri: 'https://i.pinimg.com/736x/8b/16/7a/8b167af653c2399dd93b952a48740620.jpg' }} style={styles.profileImage} />
-          <View style={styles.editIconBadge}>
-             <Ionicons name="pencil" size={8} color="white" />
-          </View>
+        <TouchableOpacity onPress={() => router.push("/profile")}>
+          <Image 
+            source={{ uri: 'https://i.pinimg.com/736x/8b/16/7a/8b167af653c2399dd93b952a48740620.jpg' }} 
+            style={styles.profileImage} 
+          />
         </TouchableOpacity>
+      </SafeAreaView>
+
+      {/* --- TAB SWITCHER OVAL --- */}
+      <View style={styles.tabOuterContainer}>
+        <View style={styles.tabContainer}>
+          <TouchableOpacity 
+            style={[styles.tabButton, activeTab === 'Masak' && styles.activeTabBg]} 
+            onPress={() => setActiveTab('Masak')}
+          >
+            <Text style={[styles.tabText, activeTab === 'Masak' && { color: '#FFFFFF', fontWeight: 'bold' }]}>Masak</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={[styles.tabButton, activeTab === 'Bahan' && styles.activeTabBg]} 
+            onPress={() => setActiveTab('Bahan')}
+          >
+            <Text style={[styles.tabText, activeTab === 'Bahan' && { color: '#FFFFFF', fontWeight: 'bold' }]}>Bahan</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
-      <View style={styles.tabContainer}>
-        <TouchableOpacity 
-          style={[styles.tabButton, activeTab === 'Masak' && styles.activeTab]} 
-          onPress={() => setActiveTab('Masak')}
-        >
-          <Text style={[styles.tabText, activeTab === 'Masak' && styles.activeTabText]}>Masak</Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity 
-          style={[styles.tabButton, activeTab === 'Order' && styles.activeTab]} 
-          onPress={() => setActiveTab('Order')}
-        >
-          <Text style={[styles.tabText, activeTab === 'Order' && styles.activeTabText]}>Order</Text>
-        </TouchableOpacity>
-      </View>
-
+      {/* Judul Section Dinamis */}
       <Text style={styles.sectionTitle}>
-        {activeTab === 'Masak' ? 'Resep Makanan' : 'Order Makanan'}
+        {activeTab === 'Masak' ? 'Resep Makanan' : 'Info Bahan'}
       </Text>
 
       <FlatList
-        data={activeTab === 'Masak' ? MASAK_DATA : ORDER_DATA}
+        data={activeTab === 'Masak' ? MASAK_DATA : BAHAN_DATA}
         renderItem={renderFoodItem}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
       />
 
-      <View style={styles.bottomNav}>
-        <TouchableOpacity onPress={() => router.push("/" as any)} style={styles.navItem}>
-          <Ionicons name="home-outline" size={24} color="white" />
-          <Text style={styles.navText}>Home</Text>
-        </TouchableOpacity>
-        <View style={styles.navCircleContainer}>
-          <TouchableOpacity onPress={() => router.push("/kondisi_order" as any)} style={styles.navCircle}>
-            <Ionicons name="search" size={24} color="white" />
-            <Text style={styles.navCircleText}>Get Food Rec</Text>
-          </TouchableOpacity>
-        </View>
-        <TouchableOpacity style={styles.navItem}>
-          <Ionicons name="briefcase" size={24} color="white" />
-          <Text style={styles.navText}>List</Text>
-        </TouchableOpacity>
-      </View>
-    </SafeAreaView>
+      {/* CustomNavbar Bawah Terintegrasi */}
+      <CustomNavbar />
+    </View>
   );
 }
 
-// ... Styles tetap sama ...
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#FFF8EF' },
-    header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 10 },
-    logoText: { fontSize: 28, color: '#9E5F3B', fontFamily: 'Langar-Regular' },
-    profileButton: { position: 'relative' },
-    profileImage: { width: 40, height: 40, borderRadius: 20, borderWidth: 1, borderColor: '#5b2f20' },
-    editIconBadge: { position: 'absolute', right: -2, bottom: -2, backgroundColor: '#5b2f20', borderRadius: 10, padding: 2 },
-    tabContainer: { flexDirection: 'row', backgroundColor: 'white', marginHorizontal: 20, borderRadius: 25, padding: 5, marginTop: 10, elevation: 2 },
-    tabButton: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 20 },
-    activeTab: { backgroundColor: '#9E5F3B' },
-    tabText: { fontSize: 18, color: '#333', fontWeight: '500' },
-    activeTabText: { color: 'white' },
-    sectionTitle: { textAlign: 'center', fontSize: 20, fontWeight: 'bold', color: '#8D5B3E', marginTop: 20, marginBottom: 10 },
-    listContent: { paddingHorizontal: 20, paddingBottom: 100 },
-    card: { backgroundColor: '#9E5F3B', borderRadius: 20, flexDirection: 'row', padding: 15, marginBottom: 15, alignItems: 'center' },
-    cardInfo: { flex: 1 },
-    titleRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-    foodName: { color: 'white', fontSize: 22, fontWeight: 'bold' },
-    ratingRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-    ratingText: { color: 'white', fontSize: 14, fontWeight: 'bold' },
-    foodPrice: { color: 'white', fontSize: 14, marginVertical: 5 },
-    detailButton: { backgroundColor: 'rgba(255,255,255,0.4)', paddingVertical: 5, paddingHorizontal: 15, borderRadius: 12, alignSelf: 'flex-start' },
-    detailButtonText: { color: 'white', fontSize: 12, fontWeight: '600' },
-    foodImage: { width: 90, height: 90, borderRadius: 15, marginLeft: 10 },
-    bottomNav: { position: 'absolute', bottom: 0, width: '100%', height: 75, backgroundColor: '#8D5B3E', flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center' },
-    navItem: { alignItems: 'center' },
-    navText: { color: 'white', fontSize: 10, marginTop: 2 },
-    navCircleContainer: { marginTop: -40 },
-    navCircle: { width: 70, height: 70, borderRadius: 35, backgroundColor: '#6F4E37', justifyContent: 'center', alignItems: 'center', borderWidth: 5, borderColor: '#FFF8EF' },
-    navCircleText: { color: 'white', fontSize: 8, textAlign: 'center', fontWeight: 'bold' }
-  });
+  container: { flex: 1, backgroundColor: '#FFF8EF' },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 25, paddingVertical: 10 },
+  logoText: { fontSize: 24, color: '#9E5F3B', fontWeight: 'bold', fontFamily: 'Langar-Regular' },
+  profileImage: { width: 42, height: 42, borderRadius: 21, borderWidth: 1.5, borderColor: '#5b2f20' },
+  tabOuterContainer: { paddingHorizontal: 25, marginTop: 10 },
+  tabContainer: { 
+    flexDirection: 'row', backgroundColor: '#FFFFFF', borderRadius: 35, padding: 4, alignItems: 'center',
+    elevation: 3, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4
+  },
+  tabButton: { flex: 1, paddingVertical: 12, alignItems: 'center', borderRadius: 30 },
+  activeTabBg: { backgroundColor: '#9E5F3B' },
+  tabText: { fontSize: 22, color: '#1A1A1A', fontFamily: 'Langar-Regular' },
+  sectionTitle: { textAlign: 'center', fontSize: 24, color: '#9E5F3B', marginTop: 20, marginBottom: 15, fontWeight: '600', fontFamily: 'Langar-Regular' },
+  listContent: { paddingHorizontal: 25, paddingBottom: 110 },
+  card: { 
+    backgroundColor: '#9E5F3B', 
+    borderRadius: 24, 
+    flexDirection: 'row', 
+    padding: 16, 
+    marginBottom: 15, 
+    alignItems: 'center', 
+    justifyContent: 'space-between',
+    elevation: 3 
+  },
+  cardInfo: { flex: 1, marginRight: 15, justifyContent: 'center' },
+  foodName: { color: 'white', fontSize: 22, fontWeight: '500', fontFamily: 'Langar-Regular', marginBottom: 4 },
+  foodPrice: { color: 'rgba(255, 255, 255, 0.9)', fontSize: 14, marginBottom: 12 },
+  actionButton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.3)', 
+    paddingVertical: 6,
+    paddingHorizontal: 16,
+    borderRadius: 15,
+    alignSelf: 'flex-start',
+  },
+  actionButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  foodImage: { 
+    width: 95, 
+    height: 95, 
+    borderRadius: 20,
+    backgroundColor: '#FFFFFF'
+  },
+});

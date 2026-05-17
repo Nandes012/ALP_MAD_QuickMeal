@@ -63,7 +63,7 @@ export default function Profile() {
           </TouchableOpacity>
         </View>
         
-        {isVIP && <Text style={styles.vipDateText}>Berakhir 11 hari yang lalu</Text>}
+        {isVIP && <Text style={styles.vipDateText}>Berakhir dalam 29 hari</Text>}
 
         <TouchableOpacity style={styles.vipLinkRow}>
           <Text style={styles.vipDesc}>Fitur & elemen premium, dan bebas iklan</Text>
