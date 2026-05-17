@@ -6,6 +6,10 @@ use App\Http\Controllers\RecipeController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\IngredientController;
 use App\Http\Controllers\LocationController;
+use App\Http\Controllers\PaymentController;
+
+$ingredientDetailRoute = '/ingredients/' . '{id}';
+$locationDetailRoute = '/locations/' . '{id}';
 
 Route::post('/auth/register', [UserController::class, 'register']);
 Route::post('/auth/login', [UserController::class, 'login']);
@@ -24,6 +28,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/auth/logout', [UserController::class, 'logout']);
     Route::put('/user', [UserController::class, 'update']);
     Route::post('/profile/update-picture', [UserController::class, 'updateProfilePicture']);
+
+    Route::get('/subscription/current', [PaymentController::class, 'current']);
+    Route::post('/subscription/upgrade', [PaymentController::class, 'createUpgrade']);
+    Route::post('/subscription/upgrade/confirm', [PaymentController::class, 'confirmUpgrade']);
+    Route::get('/subscription/history', [PaymentController::class, 'history']);
+
     Route::get('/users', [UserController::class, 'index']);
     Route::get('/users/{id}', [UserController::class, 'show']);
     Route::delete('/users/{id}', [UserController::class, 'destroy']);
@@ -31,16 +41,13 @@ Route::middleware('auth:sanctum')->group(function () {
 
 //routes for ingredients
 Route::get('/ingredients', [IngredientController::class, 'index']);
-Route::get('/ingredients/{id}', [IngredientController::class, 'show']);
-Route::get('/ingredients', [IngredientController::class, 'index']);
-Route::get('/ingredients/{id}', [IngredientController::class, 'show']);
+Route::get($ingredientDetailRoute, [IngredientController::class, 'show']);
 Route::post('/ingredients', [IngredientController::class, 'store']);
-Route::put('/ingredients/{id}', [IngredientController::class, 'update']);
-Route::delete('/ingredients/{id}', [IngredientController::class, 'destroy']);
+Route::put($ingredientDetailRoute, [IngredientController::class, 'update']);
+Route::delete($ingredientDetailRoute, [IngredientController::class, 'destroy']);
 
 //routes for location
 Route::get('/locations', [LocationController::class, 'index']);
-Route::get('/locations/{id}', [LocationController::class, 'show']);
 Route::post('/locations', [LocationController::class, 'store']);
-Route::put('/locations/{id}', [LocationController::class, 'update']);
-Route::delete('/locations/{id}', [LocationController::class, 'destroy']);
+Route::put($locationDetailRoute, [LocationController::class, 'update']);
+Route::delete($locationDetailRoute, [LocationController::class, 'destroy']);
