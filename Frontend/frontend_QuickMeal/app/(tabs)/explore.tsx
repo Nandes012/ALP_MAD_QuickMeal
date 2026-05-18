@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, Image, TouchableOpacity, FlatList, StatusBar } from 'react-native';
+import { StyleSheet, Text, View, Image, TouchableOpacity, FlatList, StatusBar, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -37,13 +37,15 @@ async function fetchList(activeTab: 'Masak' | 'Order') {
     if (!res.ok) throw new Error(`API error ${res.status}`);
     const json = await res.json();
     if (json?.success && Array.isArray(json.data)) {
-      return json.data.map((r: any) => ({
+      const recipes = json.data.map((r: any) => ({
         id: String(r.id),
         name: r.title || r.name || 'Resep',
         price: Number(r.totalIngredientPrice || 0).toLocaleString('id-ID'),
         image: r.image || r.imageUrl || 'https://via.placeholder.com/300',
         rating: r.cookingTime ? `${r.cookingTime}m` : undefined,
       }));
+      // Deduplicate by id
+      return Array.from(new Map(recipes.map(item => [item.id, item])).values());
     }
     return [];
   }
@@ -53,13 +55,15 @@ async function fetchList(activeTab: 'Masak' | 'Order') {
   if (!res.ok) throw new Error(`API error ${res.status}`);
   const json = await res.json();
   if (json?.success && Array.isArray(json.data)) {
-    return json.data.map((o: any) => ({
+    const orders = json.data.map((o: any) => ({
       id: String(o.id),
       name: o.merchant_name || `Order #${o.id}`,
       price: o.total_price || '0',
       image: o.image || 'https://via.placeholder.com/300',
       rating: '4.9',
     }));
+    // Deduplicate by id
+    return Array.from(new Map(orders.map(item => [item.id, item])).values());
   }
   return [];
 }
@@ -124,6 +128,19 @@ export default function ExploreScreen() {
     }
   }
 
+  const handleDetailPress = (item: FoodItem) => {
+    const path = activeTab === 'Masak' ? '/detail_resep' : '/detail_order';
+    router.push({ 
+      pathname: path as any, 
+      params: {
+        id: item.id,
+        name: item.name,
+        imageUrl: item.image,
+        price: item.price
+      } 
+    });
+  };
+
   const renderFoodItem = ({ item }: { item: FoodItem }) => (
     <View style={styles.card}>
       <View style={styles.cardInfo}>
@@ -140,18 +157,7 @@ export default function ExploreScreen() {
         
           <TouchableOpacity 
             style={styles.detailButton}
-            onPress={() => {
-              const path = activeTab === 'Masak' ? '/detail_resep' : '/detail_order';
-              router.push({ 
-                  pathname: path as any, 
-                  params: {
-                    id: activeTab === 'Masak' ? item.id : undefined,
-                    name: item.name,
-                    imageUrl: item.image,
-                    price: item.price
-                  } 
-              });
-            }}
+            onPress={() => handleDetailPress(item)}
           >
             <Text style={styles.detailButtonText}>
               {activeTab === 'Masak' ? 'Resep' : 'Order Detail'}

@@ -90,6 +90,23 @@ export default function ListScreen() {
     'Langar-Regular': Langar_400Regular,
   });
 
+  const handleDetailPress = (item: FoodItem) => {
+    const path = activeTab === 'Masak' ? '/detail_resep' : '/detail_order';
+    const ingredientsString = item.ingredients ? JSON.stringify(item.ingredients) : JSON.stringify([]);
+
+    router.push({ 
+      pathname: path as any, 
+      params: { 
+        id: item.id,
+        name: item.name, 
+        imageUrl: encodeURIComponent(item.imageUri),
+        price: item.price,
+        time: item.time || "25 Menit",
+        ingredients: ingredientsString
+      } 
+    });
+  };
+
   const renderFoodItem = ({ item }: { item: FoodItem }) => (
     <View style={styles.card}>
       <View style={styles.cardInfo}>
@@ -106,21 +123,7 @@ export default function ListScreen() {
         
         <TouchableOpacity 
           style={styles.detailButton}
-          onPress={() => {
-            const path = activeTab === 'Masak' ? '/detail_resep' : '/detail_order';
-            const ingredientsString = item.ingredients ? JSON.stringify(item.ingredients) : JSON.stringify([]);
-
-            router.push({ 
-                pathname: path as any, 
-                params: { 
-                  name: item.name, 
-                  imageUrl: encodeURIComponent(item.imageUri), // Encode agar URL aman dikirim
-                  price: item.price,
-                  time: item.time || "25 Menit",
-                  ingredients: ingredientsString
-                } 
-            });
-          }}
+          onPress={() => handleDetailPress(item)}
         >
           <Text style={styles.detailButtonText}>
             {activeTab === 'Masak' ? 'Resep' : 'Order Detail'}
