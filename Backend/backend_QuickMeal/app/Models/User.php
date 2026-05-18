@@ -75,4 +75,9 @@ class User extends Authenticatable
     {
         return $this->hasMany(Subscription::class);
     }
+
+    public function recentViewedRecipes(): HasMany
+    {
+        return $this->hasMany(RecentViewedRecipe::class);
+    }
 }

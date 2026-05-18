@@ -1,8 +1,9 @@
-import React from 'react';
-import { StyleSheet, Text, View, Image, FlatList, TouchableOpacity, ImageBackground, StatusBar } from 'react-native';
+import React, { useState } from 'react';
+import { StyleSheet, Text, View, Image, FlatList, TouchableOpacity, ImageBackground, StatusBar, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { useRecipeView } from '@/hooks/useRecipeView';
 
 interface ResepItem {
   id: string;
@@ -28,21 +29,30 @@ const OTHER_RECS: ResepItem[] = [
 
 export default function HasilRecResepScreen() {
   const router = useRouter();
+  const { saveRecipeView, saving } = useRecipeView();
+
+  const handleRecipePress = async (item: ResepItem) => {
+    const success = await saveRecipeView(item.id);
+    if (success) {
+      router.push({
+        pathname: '/detail_resep',
+        params: { 
+          name: item.menu || item.title, 
+          imageUrl: item.image,
+          price: item.price,
+          time: item.time
+        }
+      });
+    }
+  };
 
   const renderCard = (item: ResepItem) => (
     <TouchableOpacity 
       key={item.id} 
       style={styles.card}
       activeOpacity={0.8}
-      onPress={() => router.push({
-        pathname: '/detail_resep',
-        params: { 
-          name: item.menu || item.title, 
-          imageUrl: item.image, // Mengirim URL gambar
-          price: item.price,
-          time: item.time
-        }
-      })}
+      onPress={() => handleRecipePress(item)}
+      disabled={saving}
     >
       <Image source={{ uri: item.image }} style={styles.cardImage} resizeMode="cover" />
       <View style={styles.cardInfo}>
@@ -55,7 +65,13 @@ export default function HasilRecResepScreen() {
             <Text style={styles.cardTime}>{item.time}</Text>
           </View>
         </View>
-        <Text style={styles.detailText}>Lihat Detail</Text>
+        <TouchableOpacity onPress={() => handleRecipePress(item)} disabled={saving}>
+          {saving ? (
+            <ActivityIndicator size="small" color="white" />
+          ) : (
+            <Text style={styles.detailText}>Lihat Detail</Text>
+          )}
+        </TouchableOpacity>
       </View>
     </TouchableOpacity>
   );

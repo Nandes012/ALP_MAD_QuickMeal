@@ -7,6 +7,7 @@ use App\Http\Controllers\OrderController;
 use App\Http\Controllers\IngredientController;
 use App\Http\Controllers\LocationController;
 use App\Http\Controllers\PaymentController;
+use App\Http\Controllers\RecentViewedRecipeController;
 
 $ingredientDetailRoute = '/ingredients/' . '{id}';
 $locationDetailRoute = '/locations/' . '{id}';
@@ -37,6 +38,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/users', [UserController::class, 'index']);
     Route::get('/users/{id}', [UserController::class, 'show']);
     Route::delete('/users/{id}', [UserController::class, 'destroy']);
+
+    // Routes for recently viewed recipes
+    Route::get('/recent-viewed-recipes', [RecentViewedRecipeController::class, 'index']);
+    Route::post('/recent-viewed-recipes', [RecentViewedRecipeController::class, 'store']);
 });
 
 //routes for ingredients

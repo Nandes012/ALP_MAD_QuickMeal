@@ -1,13 +1,14 @@
-import React, { useEffect, useState } from 'react';
-import { StyleSheet, Text, View, Image, TouchableOpacity, ScrollView, Platform, ActivityIndicator } from 'react-native';
+import React, { useEffect, useState, useCallback } from 'react';
+import { StyleSheet, Text, View, Image, TouchableOpacity, ScrollView, Platform, ActivityIndicator, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // --- IMPORT FONT LANGAR ---
 import { useFonts, Langar_400Regular } from '@expo-google-fonts/langar';
 import { API_BASE_URL } from '@/constants/api';
+import { useRecipeView } from '@/hooks/useRecipeView';
 
 interface FoodItem {
   id: string;
@@ -46,6 +47,7 @@ export default function HomeScreen() {
   const [popularFood, setPopularFood] = useState<FoodItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
+  const { saveRecipeView, saving } = useRecipeView();
 
   // --- MEMUAT FONT ---
   const [fontsLoaded] = useFonts({
@@ -86,73 +88,112 @@ export default function HomeScreen() {
     }
   }
 
-  useEffect(() => {
-    const fetchPopularFood = async () => {
-      try {
-        const response = await fetch(`${API_BASE_URL}/recipes/popular`);
+  const fetchRecentRecipes = useCallback(async () => {
+    try {
+      const token = await AsyncStorage.getItem('auth_token');
 
-        if (!response.ok) {
-          throw new Error(`API error: ${response.status}`);
-        }
-
-        const result = await response.json();
-
-        if (result?.success && Array.isArray(result.data)) {
-          const mappedFood = result.data.map((recipe: RecipeApiItem) => ({
-            id: String(recipe.id),
-            name: recipe.title,
-            desc: recipe.subtitle || 'Resep populer hari ini.',
-            imageUri: recipe.image || 'https://via.placeholder.com/500',
-          }));
-
-          setPopularFood(mappedFood);
-        } else {
-          setPopularFood([]);
-        }
-      } catch (error) {
-        console.error('Failed to fetch popular recipes:', error);
+      if (!token) {
+        // If not logged in, show empty state
         setPopularFood([]);
-      } finally {
         setLoading(false);
+        return;
       }
-    };
 
-    fetchPopularFood();
+      const response = await fetch(`${API_BASE_URL}/recent-viewed-recipes`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`);
+      }
+
+      const result = await response.json();
+
+      if (result?.data && Array.isArray(result.data)) {
+        const mappedFood = result.data.map((item: any) => ({
+          id: String(item.recipe?.id || item.recipe_id),
+          name: item.recipe?.name || item.recipe?.title || 'Resep',
+          desc: item.recipe?.description || item.recipe?.subtitle || 'Resep yang baru dilihat',
+          imageUri: item.recipe?.image || item.recipe?.imageUrl || 'https://via.placeholder.com/500',
+        }));
+
+        // Deduplicate by recipe ID (keep only first occurrence)
+        const uniqueFood = Array.from(new Map(mappedFood.map(item => [item.id, item])).values());
+
+        setPopularFood(uniqueFood);
+      } else {
+        setPopularFood([]);
+      }
+    } catch (error) {
+      console.error('Failed to fetch recent recipes:', error);
+      setPopularFood([]);
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  // Fetch on mount
+  useEffect(() => {
+    fetchRecentRecipes();
+  }, [fetchRecentRecipes]);
+
+  // Refetch when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      fetchRecentRecipes();
+    }, [fetchRecentRecipes])
+  );
 
   if (!fontsLoaded) {
     return null;
   }
 
-  const renderFoodCard = (item: FoodItem) => (
-    <TouchableOpacity 
-      key={item.id} 
-      style={styles.card} 
-      activeOpacity={0.9}
-      onPress={() => router.push({
-        pathname: "/detail_resep",
-        params: { id: item.id, name: item.name, imageUrl: item.imageUri }
-      })}
-    >
-      <View style={styles.cardContent}>
-        <View style={styles.textContainer}>
-          <View style={styles.titleRow}>
-            <Text style={styles.foodName}>{item.name}</Text>
+  const renderFoodCard = (item: FoodItem) => {
+    const handlePress = async () => {
+      const success = await saveRecipeView(item.id);
+      if (success) {
+        router.push({
+          pathname: "/detail_resep",
+          params: { id: item.id, name: item.name, imageUrl: item.imageUri }
+        });
+      }
+    };
+
+    return (
+      <TouchableOpacity 
+        key={item.id} 
+        style={styles.card} 
+        activeOpacity={0.9}
+        onPress={handlePress}
+        disabled={saving}
+      >
+        <View style={styles.cardContent}>
+          <View style={styles.textContainer}>
+            <View style={styles.titleRow}>
+              <Text style={styles.foodName}>{item.name}</Text>
+            </View>
+            <Text style={styles.foodDesc} numberOfLines={2}>{item.desc}</Text>
+            <TouchableOpacity 
+              onPress={handlePress}
+              disabled={saving}
+            >
+              {saving ? (
+                <ActivityIndicator size="small" color="white" />
+              ) : (
+                <Text style={styles.detailText}>lihat detail</Text>
+              )}
+            </TouchableOpacity>
           </View>
-          <Text style={styles.foodDesc} numberOfLines={2}>{item.desc}</Text>
-          <TouchableOpacity 
-            onPress={() => router.push({
-              pathname: "/detail_resep",
-              params: { id: item.id, name: item.name, imageUrl: item.imageUri }
-            })}
-          >
-            <Text style={styles.detailText}>Lihat Detail</Text>
-          </TouchableOpacity>
+          <Image source={{ uri: item.imageUri }} style={styles.foodImage} />
         </View>
-        <Image source={{ uri: item.imageUri }} style={styles.foodImage} />
-      </View>
-    </TouchableOpacity>
-  );
+      </TouchableOpacity>
+    );
+  };
 
   let popularFoodContent: React.ReactNode;
 
@@ -203,7 +244,7 @@ export default function HomeScreen() {
         </View>
 
         <View style={styles.sectionTitleContainer}>
-          <Text style={styles.sectionTitle}>Makanan Populer</Text>
+          <Text style={styles.sectionTitle}>Resep Yang Baru Dilihat</Text>
         </View>
 
         <View style={styles.listContainer}>

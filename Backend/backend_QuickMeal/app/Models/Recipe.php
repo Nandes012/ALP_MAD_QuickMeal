@@ -28,4 +28,9 @@ class Recipe extends Model
     {
         return $this->hasMany(RecommendationItem::class);
     }
+
+    public function recentViews(): HasMany
+    {
+        return $this->hasMany(RecentViewedRecipe::class);
+    }
 }

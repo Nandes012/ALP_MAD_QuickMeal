@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { API_BASE_URL } from '@/constants/api';
+import { useRecipeView } from '@/hooks/useRecipeView';
 
 interface RecipeDetail {
   id: string;
@@ -22,6 +23,7 @@ export default function DetailResepScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const recipeId = params.id as string;
+  const { saveRecipeView } = useRecipeView();
   
   const [recipe, setRecipe] = useState<RecipeDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -47,6 +49,8 @@ export default function DetailResepScreen() {
         if (result?.success && result.data) {
           setRecipe(result.data);
           setError(null);
+          // Mark recipe as viewed when successfully loaded
+          await saveRecipeView(recipeId);
         } else {
           setError("Invalid response from server");
         }
