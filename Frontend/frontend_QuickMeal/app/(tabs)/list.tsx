@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, Text, View, Image, TouchableOpacity, FlatList, StatusBar, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { useFonts, Langar_400Regular } from '@expo-google-fonts/langar';
-import { API_BASE_URL } from '@/constants/api';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_BASE_URL, getApiHost } from '@/constants/api';
 
 // Import CustomNavbar resmi (Path keluar dua tingkat dari app/(tabs)/list.tsx)
 import CustomNavbar from '../../components/CustomNavbar';
@@ -55,6 +56,7 @@ export default function ListScreen() {
   const [activeTab, setActiveTab] = useState<'Masak' | 'Bahan'>('Masak');
   const [data, setData] = useState<FoodItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [profilePicture, setProfilePicture] = useState<string>('https://via.placeholder.com/150');
 
   // Load font Inter secara asinkron
   const [fontsLoaded] = useFonts({
@@ -63,6 +65,37 @@ export default function ListScreen() {
     'Inter-SemiBold': Langar_400Regular,
     'Inter-Bold': Langar_400Regular,
   });
+
+  const fetchProfilePicture = useCallback(async () => {
+    try {
+      const token = await AsyncStorage.getItem('auth_token');
+
+      if (!token) {
+        return;
+      }
+
+      const response = await fetch(`${API_BASE_URL}/auth/me`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`);
+      }
+
+      const result = await response.json();
+      if (result?.success && result?.data?.profile_picture) {
+        const imageUrl = `${getApiHost()}/storage/${result.data.profile_picture}`;
+        setProfilePicture(imageUrl);
+      }
+    } catch (error) {
+      console.error('Failed to fetch profile picture:', error);
+    }
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -93,6 +126,12 @@ export default function ListScreen() {
       mounted = false;
     };
   }, [activeTab]);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchProfilePicture();
+    }, [fetchProfilePicture])
+  );
 
   if (!fontsLoaded) {
     return (
@@ -155,7 +194,7 @@ export default function ListScreen() {
         <Text style={styles.logoText}>QuickMeal</Text>
         <TouchableOpacity onPress={() => router.push("/profile")}>
           <Image 
-            source={{ uri: 'https://i.pinimg.com/736x/8b/16/7a/8b167af653c2399dd93b952a48740620.jpg' }} 
+            source={{ uri: profilePicture }} 
             style={styles.profileImage} 
           />
         </TouchableOpacity>

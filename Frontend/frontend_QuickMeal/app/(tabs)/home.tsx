@@ -6,7 +6,7 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import CustomNavbar from '../../components/CustomNavbar';
 import { useFonts, Langar_400Regular } from '@expo-google-fonts/langar';
-import { API_BASE_URL } from '@/constants/api';
+import { API_BASE_URL, getApiHost } from '@/constants/api';
 import { useRecipeView } from '@/hooks/useRecipeView';
 const { width } = Dimensions.get('window');
 
@@ -23,8 +23,8 @@ export default function HomeScreen() {
   const [recentRecipes, setRecentRecipes] = useState<RecipeItem[]>([]);
   const [recommendationsLoading, setRecommendationsLoading] = useState(true);
   const [recentLoading, setRecentLoading] = useState(true);
+  const [profilePicture, setProfilePicture] = useState<string>('https://via.placeholder.com/150');
   const { saveRecipeView, saving } = useRecipeView();
-  const profilePicture = 'https://i.pinimg.com/736x/8b/16/7a/8b167af653c2399dd93b952a48740620.jpg';
 
   const [fontsLoaded] = useFonts({ 
     'Inter-Regular': Langar_400Regular,
@@ -60,6 +60,37 @@ export default function HomeScreen() {
       setRecommendedRecipes([]);
     } finally {
       setRecommendationsLoading(false);
+    }
+  }, []);
+
+  const fetchProfilePicture = useCallback(async () => {
+    try {
+      const token = await AsyncStorage.getItem('auth_token');
+
+      if (!token) {
+        return;
+      }
+
+      const response = await fetch(`${API_BASE_URL}/auth/me`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`);
+      }
+
+      const result = await response.json();
+      if (result?.success && result?.data?.profile_picture) {
+        const imageUrl = `${getApiHost()}/storage/${result.data.profile_picture}`;
+        setProfilePicture(imageUrl);
+      }
+    } catch (error) {
+      console.error('Failed to fetch profile picture:', error);
     }
   }, []);
 
@@ -117,7 +148,8 @@ export default function HomeScreen() {
   useFocusEffect(
     useCallback(() => {
       fetchRecentRecipes();
-    }, [fetchRecentRecipes])
+      fetchProfilePicture();
+    }, [fetchRecentRecipes, fetchProfilePicture])
   );
 
   if (!fontsLoaded) return null;

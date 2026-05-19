@@ -13,6 +13,8 @@ class Location extends Model
         'location_name',
         'location_picture',
         'google_maps_link',
+        'opening_time',
+        'closing_time',
     ];
 
     public function ingredients(): BelongsToMany
