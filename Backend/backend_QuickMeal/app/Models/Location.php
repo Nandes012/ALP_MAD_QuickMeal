@@ -24,6 +24,6 @@ class Location extends Model
             'ingredient_location',
             'id_location',
             'ingredient_id'
-        );
+        )->withTimestamps();
     }
 }

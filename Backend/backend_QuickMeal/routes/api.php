@@ -47,12 +47,14 @@ Route::middleware('auth:sanctum')->group(function () {
 //routes for ingredients
 Route::get('/ingredients', [IngredientController::class, 'index']);
 Route::get($ingredientDetailRoute, [IngredientController::class, 'show']);
+Route::get('/ingredients/{id}/locations', [IngredientController::class, 'getLocations']);
 Route::post('/ingredients', [IngredientController::class, 'store']);
 Route::put($ingredientDetailRoute, [IngredientController::class, 'update']);
 Route::delete($ingredientDetailRoute, [IngredientController::class, 'destroy']);
 
 //routes for location
 Route::get('/locations', [LocationController::class, 'index']);
+Route::get($locationDetailRoute, [LocationController::class, 'show']);
 Route::post('/locations', [LocationController::class, 'store']);
 Route::put($locationDetailRoute, [LocationController::class, 'update']);
 Route::delete($locationDetailRoute, [LocationController::class, 'destroy']);
