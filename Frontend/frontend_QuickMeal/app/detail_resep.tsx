@@ -1,12 +1,33 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, Text, View, Image, TouchableOpacity, ScrollView, StatusBar, ActivityIndicator } from 'react-native';
+import { StyleSheet, Text, View, Image, TouchableOpacity, ScrollView, StatusBar, ActivityIndicator, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { API_BASE_URL } from '@/constants/api';
 import { useRecipeView } from '@/hooks/useRecipeView';
+import CustomNavbar from '../components/CustomNavbar';
 
-interface RecipeDetail {
+type IngredientItem = {
+  id: string;
+  ingredient_id?: string;
+  ingredient_name?: string;
+  quantity?: string;
+  price_estimate?: number;
+};
+
+type ToolItem = {
+  id: string;
+  tool_name?: string;
+  description?: string | null;
+};
+
+type StepItem = {
+  id: string;
+  stepNumber?: number;
+  description?: string;
+};
+
+type RecipeDetail = {
   id: string;
   title: string;
   subtitle?: string;
@@ -14,62 +35,75 @@ interface RecipeDetail {
   cookingTime?: number;
   difficulty?: string;
   totalIngredientPrice?: number;
-  ingredients: any[];
-  tools: any[];
-  steps: any[];
-}
+  ingredients: IngredientItem[];
+  tools: ToolItem[];
+  steps: StepItem[];
+};
+
+const formatCurrency = (value: number | undefined): string => {
+  if (typeof value !== 'number' || Number.isNaN(value)) {
+    return '0';
+  }
+
+  return value.toLocaleString('id-ID');
+};
 
 export default function DetailResepScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
-  const recipeId = params.id as string;
+  const recipeId = String(params.id ?? '');
+  const fallbackName = params.name ? String(params.name) : 'Detail Resep';
+  const fallbackImage = params.imageUrl ? decodeURIComponent(String(params.imageUrl)) : 'https://via.placeholder.com/900x600';
   const { saveRecipeView } = useRecipeView();
-  
+
   const [recipe, setRecipe] = useState<RecipeDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showIngredients, setShowIngredients] = useState(true);
+  const [showTools, setShowTools] = useState(true);
+  const [showSteps, setShowSteps] = useState(true);
 
   useEffect(() => {
     const fetchRecipeDetail = async () => {
       try {
         if (!recipeId) {
-          setError("Recipe ID not provided");
+          setError('Recipe ID not provided');
           setLoading(false);
           return;
         }
 
         const response = await fetch(`${API_BASE_URL}/recipes/${recipeId}`);
-        
+
         if (!response.ok) {
           throw new Error(`API error: ${response.status}`);
         }
 
         const result = await response.json();
-        
+
         if (result?.success && result.data) {
           setRecipe(result.data);
           setError(null);
-          // Mark recipe as viewed when successfully loaded
           await saveRecipeView(recipeId);
         } else {
-          setError("Invalid response from server");
+          setError('Invalid response from server');
         }
       } catch (err) {
-        console.error("Error fetching recipe detail:", err);
-        setError(err instanceof Error ? err.message : "Failed to fetch recipe");
+        console.error('Error fetching recipe detail:', err);
+        setError(err instanceof Error ? err.message : 'Failed to fetch recipe');
       } finally {
         setLoading(false);
       }
     };
 
     fetchRecipeDetail();
-  }, [recipeId]);
+  }, [recipeId, saveRecipeView]);
 
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <View style={styles.centerState}>
           <ActivityIndicator size="large" color="#9E5F3B" />
+          <Text style={styles.centerText}>Memuat detail resep...</Text>
         </View>
       </SafeAreaView>
     );
@@ -78,169 +112,187 @@ export default function DetailResepScreen() {
   if (error || !recipe) {
     return (
       <SafeAreaView style={styles.container}>
-        <View style={styles.headerBar}>
+        <View style={styles.errorHeader}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
             <Ionicons name="arrow-back" size={24} color="#5b2f20" />
           </TouchableOpacity>
-          <Text style={styles.headerTitlePage}>Detail Resep</Text>
+          <Text style={styles.headerTitle}>Detail Resep</Text>
           <View style={{ width: 40 }} />
         </View>
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20 }}>
-          <Text style={{ color: '#d32f2f', fontSize: 16, textAlign: 'center' }}>
-            {error || "Recipe not found"}
-          </Text>
+        <View style={styles.centerState}>
+          <Text style={styles.errorText}>{error || 'Recipe not found'}</Text>
         </View>
       </SafeAreaView>
     );
   }
 
-  const name = recipe.title;
-  const imageUrl = recipe.image;
-  const price = recipe.totalIngredientPrice?.toString() || "0";
-  const time = recipe.cookingTime ? `${recipe.cookingTime} Menit` : "Time unknown";
+  const name = recipe.title || fallbackName;
+  const imageUrl = recipe.image || fallbackImage;
+  const price = formatCurrency(recipe.totalIngredientPrice);
+  const time = recipe.cookingTime ? `${recipe.cookingTime} Menit` : 'Tidak tersedia';
+  const difficulty = recipe.difficulty || 'Tidak diketahui';
   const ingredientsData = recipe.ingredients || [];
   const toolsData = recipe.tools || [];
   const stepsData = recipe.steps || [];
-  const totalIngredients = ingredientsData.length;
-  const totalTools = toolsData.length;
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" />
-      
-      <View style={styles.headerBar}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="#5b2f20" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitlePage}>Detail Resep</Text>
-        <View style={{ width: 40 }} />
-      </View>
+    <View style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor="#FFF8EF" />
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-        
-        <View style={styles.bannerCard}>
-          {imageUrl && (
-            <Image source={{ uri: imageUrl }} style={styles.foodImage} resizeMode="cover" />
-          )}
-          <View style={styles.bannerInfo}>
-            <Text style={styles.foodName} numberOfLines={2}>{name}</Text>
-            {/* badgeRow menggunakan flexWrap agar tidak keluar dari card */}
-            <View style={styles.badgeRow}>
-              <View style={styles.badge}>
-                <Ionicons name="time-outline" size={12} color="white" />
-                <Text style={styles.badgeTextValue}>{time}</Text>
-              </View>
-              <View style={styles.badge}>
-                <Ionicons name="wallet-outline" size={12} color="white" />
-                <Text style={styles.badgeTextValue}>Rp. {price}</Text>
-              </View>
+      <SafeAreaView edges={['top']} style={styles.appBar}>
+        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+          <Ionicons name="arrow-back" size={24} color="#8D5B3E" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>{name}</Text>
+        <View style={{ width: 40 }} />
+      </SafeAreaView>
+
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <View style={styles.imageContainer}>
+          <Image source={{ uri: imageUrl }} style={styles.mainImage} resizeMode="cover" />
+          <TouchableOpacity style={styles.playButton} activeOpacity={0.8}>
+            <Ionicons name="play" size={36} color="#9E5F3B" style={{ marginLeft: 4 }} />
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.summaryCard}>
+          <Text style={styles.recipeTitle}>{name}</Text>
+          <Text style={styles.subtitleText}>{recipe.subtitle || 'Resep live dari backend Laravel'}</Text>
+
+          <View style={styles.chipRow}>
+            <View style={styles.chip}>
+              <Ionicons name="time-outline" size={14} color="#8D5B3E" />
+              <Text style={styles.chipText}>{time}</Text>
+            </View>
+            <View style={styles.chip}>
+              <Ionicons name="flame-outline" size={14} color="#8D5B3E" />
+              <Text style={styles.chipText}>{difficulty}</Text>
+            </View>
+            <View style={styles.chip}>
+              <Ionicons name="cash-outline" size={14} color="#8D5B3E" />
+              <Text style={styles.chipText}>Rp. {price}</Text>
             </View>
           </View>
         </View>
 
-        <TouchableOpacity 
-          style={styles.accordion}
-          onPress={() => router.push({ 
-            pathname: '/bahan_page', 
-            params: { 
-              recipeId,
-              name: name
-            } 
-          })}
-        >
-          <View style={styles.accordionLeft}>
-            <Ionicons name="fast-food-outline" size={20} color="#9E5F3B" />
-            <Text style={styles.accordionText}>Bahan-bahan ({totalIngredients} item)</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={20} color="#999" />
-        </TouchableOpacity>
+        <View style={styles.cardContainer}>
+          <TouchableOpacity
+            style={styles.accordionHeader}
+            onPress={() => setShowIngredients((value) => !value)}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.accordionTitle}>Bahan-bahan ({ingredientsData.length} item)</Text>
+            <Ionicons name={showIngredients ? 'chevron-up' : 'chevron-down'} size={20} color="black" />
+          </TouchableOpacity>
 
-        <TouchableOpacity 
-          style={styles.accordion}
-          onPress={() => router.push({ pathname: '/alat_page', params: { recipeId, name } })}
-        >
-          <View style={styles.accordionLeft}>
-            <Ionicons name="restaurant-outline" size={20} color="#9E5F3B" />
-            <Text style={styles.accordionText}>Alat Masak ({totalTools} item)</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={20} color="#999" />
-        </TouchableOpacity>
-
-        <View style={styles.stepContainer}>
-          <Text style={styles.stepTitle}>Langkah Memasak</Text>
-          {stepsData.length > 0 ? (
-            stepsData.map((item, index) => (
-              <View key={item.id || index} style={styles.stepRow}>
-                <View style={styles.stepNumberContainer}>
-                  <Text style={styles.stepNumber}>{item.stepNumber || index + 1}</Text>
+          {showIngredients && (
+            <View style={styles.accordionBody}>
+              {ingredientsData.length > 0 ? ingredientsData.map((item, index) => (
+                <View key={item.id || String(index)} style={styles.bulletItem}>
+                  <Text style={styles.bulletPoint}>•</Text>
+                  <Text style={styles.bulletText}>
+                    {item.ingredient_name || 'Bahan'}{item.quantity ? ` - ${item.quantity}` : ''}{typeof item.price_estimate === 'number' ? ` (Rp. ${formatCurrency(item.price_estimate)})` : ''}
+                  </Text>
                 </View>
-                <View style={styles.stepTextBubble}>
-                  <Text style={styles.stepText}>{item.description}</Text>
-                </View>
-              </View>
-            ))
-          ) : (
-            <Text style={{ color: '#999', textAlign: 'center', marginTop: 20 }}>Tidak ada langkah tersedia</Text>
+              )) : (
+                <Text style={styles.emptySectionText}>Tidak ada bahan tersedia.</Text>
+              )}
+            </View>
           )}
         </View>
 
-        <View style={{ height: 50 }} />
+        <View style={styles.cardContainer}>
+          <TouchableOpacity
+            style={styles.accordionHeader}
+            onPress={() => setShowTools((value) => !value)}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.accordionTitle}>Alat Masak ({toolsData.length} item)</Text>
+            <Ionicons name={showTools ? 'chevron-up' : 'chevron-down'} size={20} color="black" />
+          </TouchableOpacity>
+
+          {showTools && (
+            <View style={styles.accordionBody}>
+              {toolsData.length > 0 ? toolsData.map((item, index) => (
+                <View key={item.id || String(index)} style={styles.bulletItem}>
+                  <Text style={styles.bulletPoint}>•</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.bulletText}>{item.tool_name || 'Alat masak'}</Text>
+                    {item.description ? <Text style={styles.subText}>{item.description}</Text> : null}
+                  </View>
+                </View>
+              )) : (
+                <Text style={styles.emptySectionText}>Tidak ada alat tersedia.</Text>
+              )}
+            </View>
+          )}
+        </View>
+
+        <View style={styles.cardContainer}>
+          <TouchableOpacity
+            style={styles.accordionHeader}
+            onPress={() => setShowSteps((value) => !value)}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.accordionTitle}>Langkah Memasak ({stepsData.length} tahap)</Text>
+            <Ionicons name={showSteps ? 'chevron-up' : 'chevron-down'} size={20} color="black" />
+          </TouchableOpacity>
+
+          {showSteps && (
+            <View style={[styles.accordionBody, { gap: 12 }]}>
+              {stepsData.length > 0 ? stepsData.map((item, index) => (
+                <View key={item.id || String(index)} style={styles.stepRow}>
+                  <View style={styles.stepNumberBadge}>
+                    <Text style={styles.stepNumberText}>{item.stepNumber || index + 1}.</Text>
+                  </View>
+                  <View style={styles.stepContentBox}>
+                    <Text style={styles.stepText}>{item.description || 'Langkah tidak tersedia'}</Text>
+                  </View>
+                </View>
+              )) : (
+                <Text style={styles.emptySectionText}>Tidak ada langkah memasak.</Text>
+              )}
+            </View>
+          )}
+        </View>
       </ScrollView>
-    </SafeAreaView>
+
+      <CustomNavbar />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FFF8EF' },
-  headerBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 15, paddingVertical: 10 },
+  appBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 15, paddingVertical: 5, backgroundColor: '#FFF8EF' },
+  errorHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 15, paddingVertical: 5, backgroundColor: '#FFF8EF' },
   backButton: { padding: 8 },
-  headerTitlePage: { fontSize: 20, fontWeight: 'bold', color: '#5b2f20' },
-  scrollContent: { padding: 20 },
-  
-  bannerCard: { 
-    backgroundColor: '#9E5F3B', 
-    borderRadius: 25, 
-    padding: 15, 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    marginBottom: 20,
-    minHeight: 130, // Memberi ruang minimal agar tidak sesak
-    elevation: 5
-  },
-  foodImage: { width: 90, height: 90, borderRadius: 20 },
-  bannerInfo: { flex: 1, marginLeft: 15, justifyContent: 'center' },
-  foodName: { color: 'white', fontSize: 20, fontWeight: 'bold', marginBottom: 8 },
-  
-  badgeRow: { 
-    flexDirection: 'row', 
-    flexWrap: 'wrap', // KUNCI AGAR TIDAK KELUAR CARD
-    gap: 6 
-  },
-  badge: { 
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.25)', 
-    paddingVertical: 4, 
-    paddingHorizontal: 8, 
-    borderRadius: 10,
-    gap: 4,
-    marginBottom: 4 // Jarak jika ter-wrap ke bawah
-  },
-  badgeTextValue: { color: 'white', fontSize: 10, fontWeight: 'bold' },
-
-  accordion: { 
-    backgroundColor: 'white', borderRadius: 18, padding: 18, 
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', 
-    borderWidth: 1, borderColor: '#F0E0D0', marginBottom: 12, elevation: 2
-  },
-  accordionLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  accordionText: { fontSize: 15, fontWeight: '600', color: '#333' },
-
-  stepContainer: { backgroundColor: 'white', borderRadius: 25, padding: 20, borderWidth: 1, borderColor: '#F0E0D0', marginTop: 10 },
-  stepTitle: { fontSize: 17, fontWeight: 'bold', marginBottom: 20, color: '#5b2f20' },
-  stepRow: { flexDirection: 'row', marginBottom: 18, alignItems: 'flex-start' },
-  stepNumberContainer: { backgroundColor: '#9E5F3B', width: 28, height: 28, borderRadius: 14, justifyContent: 'center', alignItems: 'center', marginRight: 12, marginTop: 2 },
-  stepNumber: { color: 'white', fontWeight: 'bold', fontSize: 14 },
-  stepTextBubble: { flex: 1, backgroundColor: '#FDF7F2', padding: 15, borderRadius: 15, borderLeftWidth: 3, borderLeftColor: '#9E5F3B' },
-  stepText: { fontSize: 14, color: '#444', lineHeight: 20 },
+  headerTitle: { fontSize: 18, fontWeight: 'bold', color: '#8D5B3E', textAlign: 'center', flex: 1, fontFamily: Platform.OS === 'android' ? 'serif' : 'Georgia' },
+  scrollContent: { paddingHorizontal: 20, paddingTop: 10, paddingBottom: 120 },
+  centerState: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20 },
+  centerText: { marginTop: 12, color: '#8D5B3E', fontWeight: '600' },
+  errorText: { color: '#d32f2f', fontSize: 16, textAlign: 'center' },
+  imageContainer: { width: '100%', height: 190, borderRadius: 15, overflow: 'hidden', position: 'relative', backgroundColor: '#EAEAEA' },
+  mainImage: { width: '100%', height: '100%' },
+  playButton: { position: 'absolute', top: '50%', left: '50%', transform: [{ translateX: -27.5 }, { translateY: -27.5 }], backgroundColor: 'rgba(255, 255, 255, 0.9)', width: 55, height: 55, borderRadius: 27.5, justifyContent: 'center', alignItems: 'center', elevation: 4 },
+  summaryCard: { backgroundColor: '#FFFFFF', borderRadius: 18, padding: 16, borderWidth: 1, borderColor: '#EFE3D5', marginTop: 15, marginBottom: 16, elevation: 1 },
+  recipeTitle: { fontSize: 18, fontWeight: '700', color: '#333333', marginBottom: 8, fontFamily: Platform.OS === 'android' ? 'serif' : 'Georgia' },
+  subtitleText: { fontSize: 13, color: '#6B6B6B', lineHeight: 18 },
+  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 12 },
+  chip: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#F9F2ED', paddingHorizontal: 10, paddingVertical: 8, borderRadius: 999 },
+  chipText: { fontSize: 12, color: '#8D5B3E', fontWeight: '600' },
+  cardContainer: { backgroundColor: 'white', borderRadius: 18, borderWidth: 1, borderColor: '#EFE3D5', marginBottom: 15, overflow: 'hidden', elevation: 1 },
+  accordionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 14, paddingHorizontal: 18, backgroundColor: 'white' },
+  accordionTitle: { fontSize: 14, fontWeight: '600', color: '#1A1A1A' },
+  accordionBody: { paddingHorizontal: 18, paddingBottom: 15, borderTopWidth: 1, borderColor: '#F7EDE2', paddingTop: 12 },
+  bulletItem: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 6 },
+  bulletPoint: { fontSize: 15, color: '#8D5B3E', marginRight: 8, lineHeight: 18 },
+  bulletText: { fontSize: 13, color: '#444444', flex: 1, lineHeight: 18 },
+  subText: { fontSize: 12, color: '#8D5B3E', marginTop: 4, lineHeight: 16 },
+  emptySectionText: { color: '#8D5B3E', fontSize: 13 },
+  stepRow: { flexDirection: 'row', alignItems: 'flex-start', width: '100%' },
+  stepNumberBadge: { backgroundColor: '#9E5F3B', width: 34, height: 34, borderRadius: 17, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
+  stepNumberText: { color: 'white', fontSize: 13, fontWeight: 'bold' },
+  stepContentBox: { flex: 1, backgroundColor: '#E8EDF2', borderRadius: 15, paddingVertical: 12, paddingHorizontal: 15 },
+  stepText: { fontSize: 12, color: '#2C3E50', fontWeight: '500', lineHeight: 16 },
 });

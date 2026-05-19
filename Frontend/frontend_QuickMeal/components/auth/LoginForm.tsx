@@ -77,7 +77,7 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
       await AsyncStorage.setItem('auth_token', data.token);
 
       // Navigate to home
-      router.replace("/(tabs)");
+      router.replace("/home");
 
     } catch (error) {
 

@@ -154,7 +154,7 @@ export default function SignupForm({ onSignup }: Readonly<{ onSignup?: (data: an
       setIsLoading(false);
 
       // Navigate to home
-      router.replace("/(tabs)");
+      router.replace("/home");
 
     } catch (error) {
       console.log("SIGNUP ERROR:", error);

@@ -1,184 +1,142 @@
-import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, Image, TouchableOpacity, FlatList, StatusBar, ActivityIndicator } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import React, { useEffect, useState } from 'react';
+import { StyleSheet, Text, View, Image, TouchableOpacity, FlatList, StatusBar, ActivityIndicator, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Ionicons } from '@expo/vector-icons';
+import { useFonts, Langar_400Regular } from '@expo-google-fonts/langar';
+import CustomNavbar from '../../components/CustomNavbar';
 import { API_BASE_URL } from '@/constants/api';
 
-// Helper function to construct profile picture URL
-const getProfilePictureUrl = (profilePicture: string | null | undefined): string => {
-  if (!profilePicture) {
-    return 'https://i.pinimg.com/736x/8b/16/7a/8b167af653c2399dd93b952a48740620.jpg';
-  }
-  
-  // If it's already a full URL, return as is
-  if (profilePicture.startsWith('http')) {
-    return profilePicture;
-  }
-  
-  // Construct the storage URL
-  const baseUrl = API_BASE_URL.replace('/api', '');
-  return `${baseUrl}/storage/${profilePicture}`;
-};
-
-// --- DATA INTERFACE ---
 interface FoodItem {
   id: string;
   name: string;
   price: string;
-  image: string;
-  rating?: string;
+  imageUri: string;
 }
 
-async function fetchList(activeTab: 'Masak' | 'Order') {
-  if (activeTab === 'Masak') {
-    const res = await fetch(`${API_BASE_URL}/recipes`);
-    if (!res.ok) throw new Error(`API error ${res.status}`);
-    const json = await res.json();
-    if (json?.success && Array.isArray(json.data)) {
-      const recipes = json.data.map((r: any) => ({
-        id: String(r.id),
-        name: r.title || r.name || 'Resep',
-        price: Number(r.totalIngredientPrice || 0).toLocaleString('id-ID'),
-        image: r.image || r.imageUrl || 'https://via.placeholder.com/300',
-        rating: r.cookingTime ? `${r.cookingTime}m` : undefined,
-      }));
-      // Deduplicate by id
-      return Array.from(new Map(recipes.map(item => [item.id, item])).values());
-    }
+async function fetchList(activeTab: 'Masak' | 'Bahan') {
+  const res = await fetch(`${API_BASE_URL}/recipes`);
+  if (!res.ok) throw new Error(`API error ${res.status}`);
+
+  const json = await res.json();
+  if (!json?.success || !Array.isArray(json.data)) {
     return [];
   }
 
-  // Order tab
-  const res = await fetch(`${API_BASE_URL}/orders`);
-  if (!res.ok) throw new Error(`API error ${res.status}`);
-  const json = await res.json();
-  if (json?.success && Array.isArray(json.data)) {
-    const orders = json.data.map((o: any) => ({
-      id: String(o.id),
-      name: o.merchant_name || `Order #${o.id}`,
-      price: o.total_price || '0',
-      image: o.image || 'https://via.placeholder.com/300',
-      rating: '4.9',
-    }));
-    // Deduplicate by id
-    return Array.from(new Map(orders.map(item => [item.id, item])).values());
-  }
-  return [];
+  const recipes = json.data.map((recipe: any) => ({
+    id: String(recipe.id),
+    name: recipe.title || recipe.name || 'Resep',
+    price: Number(recipe.totalIngredientPrice || recipe.price || 0).toLocaleString('id-ID'),
+    imageUri: recipe.image || recipe.imageUrl || 'https://via.placeholder.com/300',
+  }));
+
+  return Array.from(new Map<string, FoodItem>(recipes.map((item: FoodItem) => [item.id, item])).values());
 }
 
 export default function ExploreScreen() {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<'Masak' | 'Order'>('Masak');
+  const [activeTab, setActiveTab] = useState<'Masak' | 'Bahan'>('Masak');
   const [data, setData] = useState<FoodItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState<any>(null);
+  const [fontsLoaded] = useFonts({
+    'Langar-Regular': Langar_400Regular,
+  });
 
   useEffect(() => {
     let mounted = true;
+
     const load = async () => {
       setLoading(true);
       try {
         const list = await fetchList(activeTab);
-        if (mounted) setData(list);
-      } catch (err) {
-        console.error('Failed loading list:', err);
-        if (mounted) setData([]);
+        if (mounted) {
+          setData(list);
+        }
+      } catch (error) {
+        console.error('Failed loading list:', error);
+        if (mounted) {
+          setData([]);
+        }
       } finally {
-        if (mounted) setLoading(false);
+        if (mounted) {
+          setLoading(false);
+        }
       }
     };
 
     load();
-    return () => { mounted = false; };
+
+    return () => {
+      mounted = false;
+    };
   }, [activeTab]);
 
-  // Fetch user data
-  useEffect(() => {
-    fetchUserData();
-  }, []);
-
-  async function fetchUserData() {
-    try {
-      const token = await AsyncStorage.getItem('auth_token');
-      
-      if (!token) {
-        return;
-      }
-
-      const url = `${API_BASE_URL}/auth/me`;
-
-      const response = await fetch(url, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          "Accept": "application/json",
-          "Authorization": `Bearer ${token}`,
-        },
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        setUser(data.data);
-      }
-    } catch (error) {
-      console.log("FETCH USER ERROR:", error);
-    }
+  if (!fontsLoaded) {
+    return null;
   }
 
-  const handleDetailPress = (item: FoodItem) => {
-    const path = activeTab === 'Masak' ? '/detail_resep' : '/detail_order';
-    router.push({ 
-      pathname: path as any, 
+  const handleItemPress = (item: FoodItem) => {
+    const cleanName = item.name.replace(/\s+/g, ' ').trim();
+
+    if (activeTab === 'Masak') {
+      router.push({
+        pathname: '/detail_resep',
+        params: {
+          id: item.id,
+          name: cleanName,
+          imageUrl: item.imageUri,
+        },
+      });
+      return;
+    }
+
+    router.push({
+      pathname: '/detail_bahan',
       params: {
         id: item.id,
-        name: item.name,
-        imageUrl: item.image,
-        price: item.price
-      } 
+        name: cleanName,
+        imageUrl: item.imageUri,
+        price: item.price,
+      },
     });
   };
 
   const renderFoodItem = ({ item }: { item: FoodItem }) => (
-    <View style={styles.card}>
+    <TouchableOpacity
+      style={styles.card}
+      activeOpacity={0.9}
+      onPress={() => handleItemPress(item)}
+    >
       <View style={styles.cardInfo}>
-        <View style={styles.titleRow}>
-          <Text style={styles.foodName}>{item.name}</Text>
-          {activeTab === 'Order' && (
-            <View style={styles.ratingRow}>
-              <Ionicons name="star" size={14} color="#FFD700" />
-              <Text style={styles.ratingText}>{item.rating}</Text>
-            </View>
-          )}
+        <Text style={styles.foodName} numberOfLines={1}>{item.name}</Text>
+        <Text style={styles.foodPrice}>Rp. {item.price}</Text>
+
+        <View style={styles.actionButton}>
+          <Text style={styles.actionButtonText}>
+            {activeTab === 'Masak' ? 'Resep' : 'Detail Bahan'}
+          </Text>
         </View>
-        <Text style={styles.foodPrice}>RP. {item.price}</Text>
-        
-          <TouchableOpacity 
-            style={styles.detailButton}
-            onPress={() => handleDetailPress(item)}
-          >
-            <Text style={styles.detailButtonText}>
-              {activeTab === 'Masak' ? 'Resep' : 'Order Detail'}
-            </Text>
-          </TouchableOpacity>
       </View>
-      <Image source={{ uri: item.image }} style={styles.foodImage} />
-    </View>
+
+      <Image source={{ uri: item.imageUri }} style={styles.foodImage} resizeMode="cover" />
+    </TouchableOpacity>
   );
+
   let listContent: React.ReactNode;
 
   if (loading) {
     listContent = (
-      <View style={{ paddingVertical: 24, alignItems: 'center' }}>
-        <Text style={{ color: '#8D5B3E' }}>{activeTab === 'Masak' ? 'Memuat resep...' : 'Memuat order...'}</Text>
+      <View style={styles.centerState}>
+        <ActivityIndicator size="large" color="#9E5F3B" />
+        <Text style={styles.stateText}>
+          {activeTab === 'Masak' ? 'Memuat resep...' : 'Memuat bahan...'}
+        </Text>
       </View>
     );
   } else if (data.length === 0) {
     listContent = (
-      <View style={{ paddingVertical: 24, alignItems: 'center' }}>
-        <Text style={{ color: '#8D5B3E' }}>Belum ada item untuk ditampilkan.</Text>
+      <View style={styles.centerState}>
+        <Text style={styles.stateText}>Belum ada item untuk ditampilkan.</Text>
       </View>
     );
   } else {
@@ -194,125 +152,103 @@ export default function ExploreScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" />
-      
-      {/* HEADER SECTION - Link ke Profile Aktif */}
-      <View style={styles.header}>
-        <Text style={styles.logoText}>QuickMeal</Text>
-        <TouchableOpacity 
-          style={styles.profileButton}
-          onPress={() => router.push("/profile" as any)}
-        >
-          <Image 
-            source={{ uri: getProfilePictureUrl(user?.profile_picture) }} 
-            style={styles.profileImage} 
-          />
-          <View style={styles.editIconBadge}>
-             <Ionicons name="pencil" size={8} color="white" />
-          </View>
-        </TouchableOpacity>
-      </View>
+    <View style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor="#FFF8EF" />
 
-      {/* TAB SWITCHER */}
-      <View style={styles.tabContainer}>
-        <TouchableOpacity 
-          style={[styles.tabButton, activeTab === 'Masak' && styles.activeTab]} 
-          onPress={() => setActiveTab('Masak')}
-        >
-          <Text style={[styles.tabText, activeTab === 'Masak' && styles.activeTabText]}>Masak</Text>
+      <SafeAreaView edges={['top']} style={styles.header}>
+        <Text style={styles.logoText}>QuickMeal</Text>
+        <TouchableOpacity onPress={() => router.push('/profile')}>
+          <Image
+            source={{ uri: 'https://i.pinimg.com/736x/8b/16/7a/8b167af653c2399dd93b952a48740620.jpg' }}
+            style={styles.profileImage}
+          />
         </TouchableOpacity>
-        <TouchableOpacity 
-          style={[styles.tabButton, activeTab === 'Order' && styles.activeTab]} 
-          onPress={() => setActiveTab('Order')}
-        >
-          <Text style={[styles.tabText, activeTab === 'Order' && styles.activeTabText]}>Order</Text>
-        </TouchableOpacity>
+      </SafeAreaView>
+
+      <View style={styles.tabOuterContainer}>
+        <View style={styles.tabContainer}>
+          <TouchableOpacity
+            style={[styles.tabButton, activeTab === 'Masak' && styles.activeTabBg]}
+            onPress={() => setActiveTab('Masak')}
+          >
+            <Text style={[styles.tabText, activeTab === 'Masak' && styles.activeTabText]}>Masak</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.tabButton, activeTab === 'Bahan' && styles.activeTabBg]}
+            onPress={() => setActiveTab('Bahan')}
+          >
+            <Text style={[styles.tabText, activeTab === 'Bahan' && styles.activeTabText]}>Bahan</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <Text style={styles.sectionTitle}>
-        {activeTab === 'Masak' ? 'Resep Makanan' : 'Order Makanan'}
+        {activeTab === 'Masak' ? 'Resep Makanan' : 'Info Bahan'}
       </Text>
 
-      {/* CONTENT LIST */}
       {listContent}
-    </SafeAreaView>
+
+      <CustomNavbar />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FFF8EF' },
-  header: { 
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
-    alignItems: 'center', 
-    paddingHorizontal: 20, 
-    paddingVertical: 10 
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 25, paddingVertical: 10 },
+  logoText: { fontSize: 18, color: '#9E5F3B', fontWeight: 'bold', fontFamily: 'Langar-Regular' },
+  profileImage: { width: 42, height: 42, borderRadius: 21, borderWidth: 1.5, borderColor: '#5b2f20' },
+  tabOuterContainer: { paddingHorizontal: 25, marginTop: 10 },
+  tabContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 35,
+    padding: 4,
+    alignItems: 'center',
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
-  logoText: { 
-    fontSize: 28, // Ukuran disesuaikan agar font Langar terlihat jelas
-    color: '#9E5F3B', 
-    fontFamily: 'Langar-Regular', // Menggunakan font yang sudah dimuat
+  tabButton: { flex: 1, paddingVertical: 12, alignItems: 'center', borderRadius: 30 },
+  activeTabBg: { backgroundColor: '#9E5F3B' },
+  tabText: { fontSize: 22, color: '#1A1A1A', fontFamily: 'Langar-Regular' },
+  activeTabText: { color: '#FFFFFF', fontWeight: 'bold' },
+  sectionTitle: { textAlign: 'center', fontSize: 24, color: '#9E5F3B', marginTop: 20, marginBottom: 15, fontWeight: '600', fontFamily: 'Langar-Regular' },
+  listContent: { paddingHorizontal: 25, paddingBottom: 110 },
+  centerState: { paddingVertical: 30, alignItems: 'center' },
+  stateText: { color: '#8D5B3E', marginTop: 12, textAlign: 'center' },
+  card: {
+    backgroundColor: '#9E5F3B',
+    borderRadius: 24,
+    flexDirection: 'row',
+    padding: 16,
+    marginBottom: 15,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    elevation: 3,
   },
-  profileButton: { position: 'relative' },
-  profileImage: { width: 40, height: 40, borderRadius: 20, borderWidth: 1, borderColor: '#5b2f20' },
-  editIconBadge: { 
-    position: 'absolute', 
-    right: -2, 
-    bottom: -2, 
-    backgroundColor: '#5b2f20', 
-    borderRadius: 10, 
-    padding: 2 
+  cardInfo: { flex: 1, marginRight: 15, justifyContent: 'center' },
+  foodName: { color: 'white', fontSize: 22, fontWeight: '500', fontFamily: Platform.OS === 'android' ? 'serif' : 'Georgia', marginBottom: 4 },
+  foodPrice: { color: 'rgba(255, 255, 255, 0.9)', fontSize: 14, marginBottom: 12 },
+  actionButton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    paddingVertical: 6,
+    paddingHorizontal: 16,
+    borderRadius: 15,
+    alignSelf: 'flex-start',
   },
-  
-  tabContainer: { 
-    flexDirection: 'row', 
-    backgroundColor: 'white', 
-    marginHorizontal: 20, 
-    borderRadius: 25, 
-    padding: 5, 
-    marginTop: 10,
-    elevation: 2 
+  actionButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '500',
   },
-  tabButton: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 20 },
-  activeTab: { backgroundColor: '#9E5F3B' },
-  tabText: { fontSize: 18, color: '#333', fontWeight: '500' },
-  activeTabText: { color: 'white' },
-  
-  sectionTitle: { 
-    textAlign: 'center', 
-    fontSize: 20, 
-    fontWeight: 'bold', 
-    color: '#8D5B3E', 
-    marginTop: 20, 
-    marginBottom: 10 
+  foodImage: {
+    width: 95,
+    height: 95,
+    borderRadius: 20,
+    backgroundColor: '#FFFFFF',
   },
-  
-  listContent: { 
-    paddingHorizontal: 20, 
-    paddingBottom: 100 // Memberi ruang agar item terakhir tidak tertutup Navbar
-  },
-  card: { 
-    backgroundColor: '#9E5F3B', 
-    borderRadius: 20, 
-    flexDirection: 'row', 
-    padding: 15, 
-    marginBottom: 15, 
-    alignItems: 'center' 
-  },
-  cardInfo: { flex: 1 },
-  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  foodName: { color: 'white', fontSize: 20, fontWeight: 'bold' },
-  ratingRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  ratingText: { color: 'white', fontSize: 14, fontWeight: 'bold' },
-  foodPrice: { color: 'white', fontSize: 14, marginVertical: 5 },
-  detailButton: { 
-    backgroundColor: 'rgba(255,255,255,0.4)', 
-    paddingVertical: 5, 
-    paddingHorizontal: 15, 
-    borderRadius: 12, 
-    alignSelf: 'flex-start' 
-  },
-  detailButtonText: { color: 'white', fontSize: 12, fontWeight: '600' },
-  foodImage: { width: 90, height: 90, borderRadius: 15, marginLeft: 10 },
 });
