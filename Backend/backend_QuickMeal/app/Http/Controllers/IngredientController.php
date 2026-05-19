@@ -44,7 +44,7 @@ class IngredientController extends Controller
      */
     public function show($id)
     {
-        $ingredient = Ingredient::find($id);
+        $ingredient = Ingredient::with('locations')->find($id);
 
         if (!$ingredient) {
             return response()->json([
@@ -107,5 +107,34 @@ class IngredientController extends Controller
             'success' => true,
             'message' => 'Ingredient deleted successfully'
         ]);
+    }
+
+    /**
+     * GET /api/ingredients/{id}/locations
+     */
+    public function getLocations($id)
+    {
+        try {
+            $ingredient = Ingredient::with('locations')->find($id);
+
+            if (!$ingredient) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Ingredient not found'
+                ], 404);
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Locations fetched successfully',
+                'data' => $ingredient->locations
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Error fetching locations',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 }

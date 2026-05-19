@@ -160,7 +160,7 @@ export default function ListScreen() {
     } else {
       router.push({
         pathname: '/detail_bahan',
-        params: { name: cleanName, imageUrl: item.imageUri, price: item.price }
+        params: { id: item.id, name: cleanName, imageUrl: item.imageUri, price: item.price }
       });
     }
   };

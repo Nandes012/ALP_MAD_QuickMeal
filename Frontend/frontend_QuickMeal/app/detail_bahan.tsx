@@ -12,6 +12,21 @@ type IngredientDetail = {
   name: string;
   ingredient_picture?: string | null;
   price_per_kg?: number | null;
+  locations?: Location[];
+};
+
+type Location = {
+  id_location: string;
+  location_name: string;
+  location_picture?: string | null;
+  opening_time?: string | null;
+  closing_time?: string | null;
+  pivot?: {
+    ingredient_id: string;
+    id_location: string;
+    created_at?: string;
+    updated_at?: string;
+  };
 };
 
 export default function DetailBahan() {
@@ -20,6 +35,7 @@ export default function DetailBahan() {
   const ingredientId = params.id ? String(params.id) : '';
   
   const [ingredient, setIngredient] = useState<IngredientDetail | null>(null);
+  const [locations, setLocations] = useState<Location[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -53,11 +69,40 @@ export default function DetailBahan() {
       }
     };
 
+    const fetchLocations = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/ingredients/${ingredientId}/locations`);
+
+        if (!response.ok) {
+          throw new Error(`API error: ${response.status}`);
+        }
+
+        const result = await response.json();
+
+        if (result?.success && Array.isArray(result.data)) {
+          setLocations(result.data);
+        }
+      } catch (locError) {
+        console.error('Error fetching locations:', locError);
+      }
+    };
+
     fetchIngredient();
+    if (ingredientId) {
+      fetchLocations();
+    }
   }, [ingredientId]);
 
   const bahanName = (ingredient?.name || params.name ? String(ingredient?.name || params.name) : 'Bahan').replace(/\s+/g, ' ').trim();
-  const bahanImage = ingredient?.ingredient_picture || (params.imageUrl ? String(params.imageUrl) : 'https://via.placeholder.com/300');
+  
+  // Construct full image URL - handle both relative and absolute URLs
+  const getFullImageUrl = (imagePath: string | null | undefined): string => {
+    if (!imagePath) return 'https://via.placeholder.com/300';
+    if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) return imagePath;
+    return `${API_BASE_URL}${imagePath.startsWith('/') ? imagePath : '/' + imagePath}`;
+  };
+  
+  const bahanImage = getFullImageUrl(ingredient?.ingredient_picture || (params.imageUrl ? String(params.imageUrl) : null));
   const bahanPriceValue = typeof ingredient?.price_per_kg === 'number'
     ? Number(ingredient.price_per_kg).toLocaleString('id-ID')
     : params.price
@@ -67,6 +112,12 @@ export default function DetailBahan() {
   // Membuat visual estimasi harga batas bawah otomatis secara dinamis
   const basePriceNum = parseInt(bahanPriceValue.replace(/\./g, ''), 10);
   const minPriceCalculated = isNaN(basePriceNum) ? '0' : Number(Math.max(basePriceNum - 4000, 0)).toLocaleString('id-ID');
+
+  // Process locations with full image URLs
+  const processedLocations = locations.map(location => ({
+    ...location,
+    fullImageUrl: getFullImageUrl(location.location_picture)
+  }));
 
   if (loading) {
     return (
@@ -129,7 +180,37 @@ export default function DetailBahan() {
               <Text style={styles.infoValue}>Rp. {minPriceCalculated} - Rp. {bahanPriceValue}</Text>
             </View>
 
-            <Text style={styles.noteText}>Data tambahan lokasi belum tersedia dari backend.</Text>
+            {/* Separator Line */}
+            <View style={{ height: 1, backgroundColor: 'rgba(255, 255, 255, 0.3)', marginVertical: 12 }} />
+
+            {locations.length > 0 ? (
+              <View>
+                <Text style={styles.locationTitle}>Tersedia di Lokasi:</Text>
+                {processedLocations.map((location) => (
+                  <View key={location.id_location} style={styles.locationItem}>
+                    {location.fullImageUrl && (
+                      <Image
+                        source={{ uri: location.fullImageUrl }}
+                        style={styles.locationImage}
+                        resizeMode="cover"
+                      />
+                    )}
+                    <View style={styles.locationInfo}>
+                      <Text style={styles.locationName}>{location.location_name}</Text>
+                      {location.opening_time && location.closing_time ? (
+                        <Text style={styles.locationTime}>
+                          {location.opening_time} - {location.closing_time}
+                        </Text>
+                      ) : (
+                        <Text style={styles.locationTime}>Jam operasional tidak tersedia</Text>
+                      )}
+                    </View>
+                  </View>
+                ))}
+              </View>
+            ) : (
+              <Text style={styles.noteText}>Data lokasi belum tersedia dari backend.</Text>
+            )}
           </View>
 
           {/* FOOTER PERINGATAN */}
@@ -163,5 +244,11 @@ const styles = StyleSheet.create({
   infoSeparator: { width: 20, fontSize: 14, color: '#FFFFFF' },
   infoValue: { flex: 1, fontSize: 14, color: '#FFFFFF', fontWeight: '500' },
   noteText: { color: '#FFFFFF', fontSize: 12, marginTop: 18, opacity: 0.85, fontStyle: 'italic' },
+  locationTitle: { fontSize: 16, color: '#FFFFFF', fontWeight: '600', marginTop: 18, marginBottom: 12 },
+  locationItem: { backgroundColor: 'rgba(255, 255, 255, 0.15)', borderRadius: 12, marginBottom: 10, overflow: 'hidden' },
+  locationImage: { width: '100%', height: 120, backgroundColor: '#EEE' },
+  locationInfo: { padding: 12 },
+  locationName: { fontSize: 14, color: '#FFFFFF', fontWeight: '600' },
+  locationTime: { fontSize: 12, color: '#FFFFFF', marginTop: 4, opacity: 0.9 },
   warningText: { textAlign: 'center', color: '#9E5F3B', opacity: 0.6, fontSize: 12, marginTop: 30, fontStyle: 'italic' },
 });
