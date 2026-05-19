@@ -1,17 +1,32 @@
-import React from "react";
-import { View, Text, Image, StyleSheet, TouchableOpacity } from "react-native";
+import React, { useState } from "react";
+import { View, Text, Image, StyleSheet, TouchableOpacity, ActivityIndicator } from "react-native";
 import { colors } from "@/components/ui/styles";
+import { useRecipeView } from "@/hooks/useRecipeView";
 
 export default function FoodCard({ item, onPress }: any) {
   const imgSource = typeof item.image === "string" ? { uri: item.image } : item.image;
+  const { saveRecipeView, saving } = useRecipeView();
+
+  const handleDetailPress = async () => {
+    const success = await saveRecipeView(item.id);
+    if (success) {
+      onPress?.(item);
+    }
+  };
 
   return (
-    <TouchableOpacity style={styles.wrapper} onPress={() => onPress?.(item)} activeOpacity={0.9}>
+    <TouchableOpacity style={styles.wrapper} onPress={handleDetailPress} activeOpacity={0.9} disabled={saving}>
       <View style={styles.content}>
         <View style={styles.left}>
           <Text style={styles.title}>{item.title}</Text>
           <Text style={styles.sub}>{item.subtitle}</Text>
-          <Text style={styles.detail}>Lihat Detail</Text>
+          <TouchableOpacity onPress={handleDetailPress} disabled={saving}>
+            {saving ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <Text style={styles.detail}>Lihat Detail</Text>
+            )}
+          </TouchableOpacity>
         </View>
 
         <Image source={imgSource} style={styles.image} />

@@ -1,11 +1,12 @@
 import React, { useState } from "react";
-import { View, Text, TouchableOpacity, StyleSheet, Platform } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
-import Constants from "expo-constants";
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import CustomInput from "@/components/ui/customInput";
 import CustomButton from "@/components/ui/customButton";
 import { shared } from "@/components/ui/styles";
+import { API_BASE_URL } from "@/constants/api";
 
 type LoginFormProps = Readonly<{
   onLogin?: (u: string, p: string) => void;
@@ -25,17 +26,7 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
       // Clear previous errors
       setPasswordError("");
 
-      const getApiHost = () => {
-        if (Platform.OS === "web") return "http://localhost:8000";
-        const expoConfig = (Constants as any).expoConfig || {};
-        const hostUri = expoConfig?.hostUri || "";
-        const hostFromUri = hostUri ? hostUri.split(":")[0] : null;
-        const fallbackHost = "192.168.18.28"; // replace if needed
-        const host = hostFromUri || fallbackHost;
-        return `http://${host}:8000`;
-      };
-
-      const url = `${getApiHost()}/api/auth/login`;
+      const url = `${API_BASE_URL}/auth/login`;
 
       const response = await fetch(url, {
         method: "POST",
@@ -82,8 +73,11 @@ export default function LoginForm({ onLogin }: LoginFormProps) {
 
       console.log("USER:", data.user);
 
+      // Save token to AsyncStorage
+      await AsyncStorage.setItem('auth_token', data.token);
+
       // Navigate to home
-      router.replace("/(tabs)");
+      router.replace("/home");
 
     } catch (error) {
 

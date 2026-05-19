@@ -1,23 +1,96 @@
-import React from 'react';
-import { StyleSheet, Text, View, Image, TouchableOpacity, ScrollView, Platform, StatusBar } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { StyleSheet, Text, View, Image, TouchableOpacity, ScrollView, Platform, StatusBar, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons'; 
+import { API_BASE_URL } from '@/constants/api';
 
 import CustomNavbar from '../components/CustomNavbar'; 
+
+type IngredientDetail = {
+  id: string;
+  name: string;
+  ingredient_picture?: string | null;
+  price_per_kg?: number | null;
+};
 
 export default function DetailBahan() {
   const router = useRouter();
   const params = useLocalSearchParams();
+  const ingredientId = params.id ? String(params.id) : '';
   
-  // Ambil parameter dan bersihkan string dari spasi berlebih
-  const bahanName = params.name ? String(params.name).replace(/\s+/g, ' ').trim() : 'Terigu';
-  const bahanImage = params.imageUrl ? String(params.imageUrl) : 'https://i.pinimg.com/736x/11/4a/c0/114ac012b1a8d11c7847c2e361da533d.jpg';
-  const bahanPrice = params.price ? String(params.price) : '16.000';
+  const [ingredient, setIngredient] = useState<IngredientDetail | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchIngredient = async () => {
+      if (!ingredientId) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const response = await fetch(`${API_BASE_URL}/ingredients/${ingredientId}`);
+
+        if (!response.ok) {
+          throw new Error(`API error: ${response.status}`);
+        }
+
+        const result = await response.json();
+
+        if (result?.success && result.data) {
+          setIngredient(result.data);
+          setError(null);
+        } else {
+          setError('Ingredient not found');
+        }
+      } catch (fetchError) {
+        console.error('Error fetching ingredient:', fetchError);
+        setError(fetchError instanceof Error ? fetchError.message : 'Failed to fetch ingredient');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchIngredient();
+  }, [ingredientId]);
+
+  const bahanName = (ingredient?.name || params.name ? String(ingredient?.name || params.name) : 'Bahan').replace(/\s+/g, ' ').trim();
+  const bahanImage = ingredient?.ingredient_picture || (params.imageUrl ? String(params.imageUrl) : 'https://via.placeholder.com/300');
+  const bahanPriceValue = typeof ingredient?.price_per_kg === 'number'
+    ? Number(ingredient.price_per_kg).toLocaleString('id-ID')
+    : params.price
+      ? String(params.price)
+      : '0';
 
   // Membuat visual estimasi harga batas bawah otomatis secara dinamis
-  const basePriceNum = parseInt(bahanPrice.replace(/\./g, ''), 10);
-  const minPriceCalculated = isNaN(basePriceNum) ? '11.000' : Number(basePriceNum - 4000).toLocaleString('id-ID');
+  const basePriceNum = parseInt(bahanPriceValue.replace(/\./g, ''), 10);
+  const minPriceCalculated = isNaN(basePriceNum) ? '0' : Number(Math.max(basePriceNum - 4000, 0)).toLocaleString('id-ID');
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.centerState}>
+          <ActivityIndicator size="large" color="#9E5F3B" />
+          <Text style={styles.loadingText}>Memuat detail bahan...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (error && !ingredient) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.centerState}>
+          <Text style={styles.errorText}>{error}</Text>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backFallbackButton}>
+            <Text style={styles.backFallbackText}>Kembali</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <View style={{ flex: 1, backgroundColor: '#FFF8EF' }}>
@@ -53,40 +126,14 @@ export default function DetailBahan() {
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>Harga / 1kg</Text>
               <Text style={styles.infoSeparator}>:</Text>
-              <Text style={styles.infoValue}>Rp. {minPriceCalculated} - Rp. {bahanPrice}</Text>
+              <Text style={styles.infoValue}>Rp. {minPriceCalculated} - Rp. {bahanPriceValue}</Text>
             </View>
 
-            {/* Baris Jam Buka */}
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Jam Buka</Text>
-              <Text style={styles.infoSeparator}>:</Text>
-              <Text style={styles.infoValue}>10:00 - 22:00 WIB</Text>
-            </View>
-
-            {/* Lokasi Pasar */}
-            <Text style={styles.lokasiPasarTitle}>Lokasi Pasar Terdekat</Text>
-            <View style={styles.lokasiContainer}>
-              <Ionicons name="location" size={18} color="#1A1A1A" style={styles.pinIcon} />
-              <Text style={styles.lokasiText}>
-                Jl. Kumala No. 29 A, Kec. Tamalate. Salah satu pasar tradisional terbesar dan terlengkap di Makassar.
-              </Text>
-            </View>
-
-            {/* Gambar Mockup Peta */}
-            <View style={styles.mapContainer}>
-              <Image 
-                source={{ uri: 'https://www.google.com/maps/vt/data=_kRXnbYalAazODW7tW-bTUoC6qzVMhlnBUPKnH9T9f88CxlKsNz20q2LQvOaT39WXE4ghdvT_GgFVGeSCKuce-2pEINQKTbIBy--LpahDOC8mVDiGeLgRMRfdhienwXKz_jNEOBrJNEixUM-lN9M67bLHPIugTjzeZZ-qWtf6PO2bv-IIHH6ckBfgVAvvLY2AIPuwTeTqdc' }} 
-                style={styles.mapImage}
-                resizeMode="cover"
-              />
-              <View style={styles.mapFooter}>
-                <Text style={styles.mapFooterText}>Lokasi Pasar</Text>
-              </View>
-            </View>
+            <Text style={styles.noteText}>Data tambahan lokasi belum tersedia dari backend.</Text>
           </View>
 
           {/* FOOTER PERINGATAN */}
-          <Text style={styles.warningText}>Informasi dari halaman tidak 100% akurat</Text>
+          <Text style={styles.warningText}>Informasi harga dan gambar mengikuti data backend.</Text>
         </ScrollView>
       </SafeAreaView>
 
@@ -97,6 +144,11 @@ export default function DetailBahan() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  centerState: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 20 },
+  loadingText: { marginTop: 10, color: '#9E5F3B', fontWeight: '600' },
+  errorText: { color: '#d32f2f', textAlign: 'center', marginBottom: 16, fontSize: 16 },
+  backFallbackButton: { backgroundColor: '#9E5F3B', paddingHorizontal: 18, paddingVertical: 10, borderRadius: 18 },
+  backFallbackText: { color: '#fff', fontWeight: '700' },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 10 },
   backButton: { padding: 4 },
   headerTitle: { fontSize: 24, fontWeight: 'bold', color: '#9E5F3B', fontFamily: Platform.OS === 'android' ? 'serif' : 'Georgia' },
@@ -110,13 +162,6 @@ const styles = StyleSheet.create({
   infoLabel: { width: 95, fontSize: 14, color: '#FFFFFF', fontWeight: '500' },
   infoSeparator: { width: 20, fontSize: 14, color: '#FFFFFF' },
   infoValue: { flex: 1, fontSize: 14, color: '#FFFFFF', fontWeight: '500' },
-  lokasiPasarTitle: { fontSize: 14, color: '#FFFFFF', fontWeight: 'bold', marginTop: 25, marginBottom: 8, fontFamily: Platform.OS === 'android' ? 'serif' : 'Georgia' },
-  lokasiContainer: { flexDirection: 'row', alignItems: 'center', marginBottom: 15 },
-  pinIcon: { marginRight: 6 },
-  lokasiText: { flex: 1, fontSize: 12, color: '#FFFFFF', lineHeight: 16 },
-  mapContainer: { borderRadius: 15, overflow: 'hidden', backgroundColor: '#FFFFFF', marginTop: 5 },
-  mapImage: { width: '100%', height: 130 },
-  mapFooter: { backgroundColor: '#7A4325', paddingVertical: 8, alignItems: 'center' },
-  mapFooterText: { color: '#FFFFFF', fontSize: 12, fontWeight: 'bold' },
+  noteText: { color: '#FFFFFF', fontSize: 12, marginTop: 18, opacity: 0.85, fontStyle: 'italic' },
   warningText: { textAlign: 'center', color: '#9E5F3B', opacity: 0.6, fontSize: 12, marginTop: 30, fontStyle: 'italic' },
 });

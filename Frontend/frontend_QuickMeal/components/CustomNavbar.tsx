@@ -8,7 +8,7 @@ export default function CustomNavbar() {
 
   return (
     <View style={styles.navbar}>
-      <TouchableOpacity style={styles.navItem} onPress={() => router.push('/')}>
+      <TouchableOpacity style={styles.navItem} onPress={() => router.push('/home')}>
         <Ionicons name="home-outline" size={24} color="#D2B48C" />
         <Text style={[styles.navText, {color: '#D2B48C'}]}>Home</Text>
       </TouchableOpacity>

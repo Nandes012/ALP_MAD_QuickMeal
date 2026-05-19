@@ -1,10 +1,11 @@
 import React, { useState } from "react";
-import { View, Text, TouchableOpacity, StyleSheet, Platform } from "react-native";
-import Constants from "expo-constants";
+import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import CustomInput from "@/components/ui/customInput";
 import CustomButton from "@/components/ui/customButton";
 import { shared, colors } from "@/components/ui/styles";
+import { API_BASE_URL } from "@/constants/api";
 
 // Consolidated small components inside this file for simpler structure
 function FormField({ label, error, ...inputProps }: any) {
@@ -49,16 +50,50 @@ export default function SignupForm({ onSignup }: Readonly<{ onSignup?: (data: an
     setConfirmPasswordError("");
   };
 
+  const validateForm = () => {
+    let hasError = false;
+
+    if (!name) {
+      setNameError("Nama harus diisi");
+      hasError = true;
+    }
+    if (!email) {
+      setEmailError("Email harus diisi");
+      hasError = true;
+    }
+    if (!password) {
+      setPasswordError("Password harus diisi");
+      hasError = true;
+    }
+    if (!confirmPassword) {
+      setConfirmPasswordError("Konfirmasi password harus diisi");
+      hasError = true;
+    }
+
+    return hasError;
+  };
+
+  const handleSignupFailure = (data: any) => {
+    if (data?.errors) {
+      if (data.errors.name) {
+        setNameError(data.errors.name[0]);
+      }
+      if (data.errors.email) {
+        setEmailError("Email atau password tidak valid");
+      }
+      if (data.errors.password) {
+        setPasswordError(data.errors.password[0]);
+      }
+    }
+  };
+
   async function submit() {
     clearErrors();
 
-    if (!name || !email || !password || !confirmPassword) {
-      if (!name) setNameError("Nama harus diisi");
-      if (!email) setEmailError("Email harus diisi");
-      if (!password) setPasswordError("Password harus diisi");
-      if (!confirmPassword) setConfirmPasswordError("Konfirmasi password harus diisi");
+    if (validateForm()) {
       return;
     }
+
     if (password !== confirmPassword) {
       setConfirmPasswordError("Password tidak cocok");
       return;
@@ -67,17 +102,7 @@ export default function SignupForm({ onSignup }: Readonly<{ onSignup?: (data: an
     setIsLoading(true);
 
     try {
-      const getApiHost = () => {
-        if (Platform.OS === "web") return "http://localhost:8000";
-        const expoConfig = (Constants as any).expoConfig || {};
-        const hostUri = expoConfig?.hostUri || "";
-        const hostFromUri = hostUri ? hostUri.split(":")[0] : null;
-        const fallbackHost = "192.168.18.28"; // replace if needed
-        const host = hostFromUri || fallbackHost;
-        return `http://${host}:8000`;
-      };
-
-      const url = `${getApiHost()}/api/auth/register`;
+      const url = `${API_BASE_URL}/auth/register`;
 
       const response = await fetch(url, {
         method: "POST",
@@ -109,18 +134,7 @@ export default function SignupForm({ onSignup }: Readonly<{ onSignup?: (data: an
 
       // SIGNUP FAILED
       if (!response.ok) {
-        // Check if it's a validation error (has errors object)
-        if (data.errors) {
-          if (data.errors.name) {
-            setNameError(data.errors.name[0]);
-          }
-          if (data.errors.email) {
-            setEmailError("Email atau password tidak valid");
-          }
-          if (data.errors.password) {
-            setPasswordError(data.errors.password[0]);
-          }
-        }
+        handleSignupFailure(data);
         setIsLoading(false);
         return;
       }
@@ -134,10 +148,13 @@ export default function SignupForm({ onSignup }: Readonly<{ onSignup?: (data: an
       console.log("TOKEN:", data.token);
       console.log("USER:", data.user);
 
+      // Save token to AsyncStorage
+      await AsyncStorage.setItem('auth_token', data.token);
+
       setIsLoading(false);
 
       // Navigate to home
-      router.replace("/(tabs)");
+      router.replace("/home");
 
     } catch (error) {
       console.log("SIGNUP ERROR:", error);
@@ -234,5 +251,3 @@ const localStyles = StyleSheet.create({
     fontWeight: "600",
   },
 });
-
-

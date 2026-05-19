@@ -24,6 +24,7 @@ class User extends Authenticatable
         'email',
         'password',
         'is_premium',
+        'profile_picture'
     ];
 
     /**
@@ -46,7 +47,18 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'is_premium' => 'boolean',
         ];
+    }
+
+    /**
+     * Accessor to provide default profile_picture if null
+     */
+    protected function profilePicture(): \Illuminate\Database\Eloquent\Casts\Attribute
+    {
+        return \Illuminate\Database\Eloquent\Casts\Attribute::make(
+            get: fn ($value) => $value ?? 'profile_pictures/1778642103_person.jpg',
+        );
     }
 
     public function orders(): HasMany
@@ -62,5 +74,10 @@ class User extends Authenticatable
     public function subscriptions(): HasMany
     {
         return $this->hasMany(Subscription::class);
+    }
+
+    public function recentViewedRecipes(): HasMany
+    {
+        return $this->hasMany(RecentViewedRecipe::class);
     }
 }

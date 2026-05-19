@@ -5,8 +5,8 @@ export default function TabLayout() {
     <Tabs screenOptions={{ 
       headerShown: false,
       tabBarStyle: { display: 'none' } // Sembunyikan navbar asli Expo
-    }}>
-      <Tabs.Screen name="index" />
+    }} initialRouteName="home">
+      <Tabs.Screen name="home" />
       <Tabs.Screen name="food_rec" />
       <Tabs.Screen name="list" />
     </Tabs>

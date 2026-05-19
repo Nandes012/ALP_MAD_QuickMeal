@@ -1,8 +1,10 @@
-import React from 'react';
-import { StyleSheet, Text, View, Image, FlatList, TouchableOpacity, StatusBar, Platform, ImageBackground } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { StyleSheet, Text, View, Image, FlatList, TouchableOpacity, StatusBar, Platform, ImageBackground, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { useRecipeView } from '@/hooks/useRecipeView';
+import { API_BASE_URL } from '@/constants/api';
 
 interface ResepItem {
   id: string;
@@ -12,21 +14,69 @@ interface ResepItem {
   image: string;
 }
 
-// Data Array untuk memudahkan kamu mengubah Title, Harga, Waktu, dan Gambar Resep sendiri
-const TOP_RECS: ResepItem[] = [
-  { id: 't1', title: 'Resep Nasi Goreng Orak Arik', price: '25.000', time: '20 Menit', image: 'https://i.pinimg.com/1200x/9a/f6/9f/9af69fd227aa680e75b2bdd6404162c8.jpg' },
-  { id: 't2', title: 'Resep Telur Kecap', price: '25.000', time: '10 Menit', image: 'https://i.pinimg.com/736x/78/c0/8b/78c08ba3ed2d852a4e535fe7bc1e7aae.jpg' },
-  { id: 't3', title: 'Resep Tempe Goreng Kriuk', price: '25.000', time: '20 Menit', image: 'https://i.pinimg.com/736x/71/48/60/714860a183bf15c2e9b1608ac0891911.jpg' },
-];
-
-const OTHER_RECS: ResepItem[] = [
-  { id: 'o1', title: 'Resep Ayam Crispy', price: '25.000', time: '20 Menit', image: 'https://i.pinimg.com/1200x/13/f2/6e/13f26ed3347cc08c913d74d61456ae35.jpg' },
-  { id: 'o2', title: 'Resep Pisang Goreng', price: '25.000', time: '20 Menit', image: 'https://i.pinimg.com/736x/a9/ee/b1/a9eeb17125f76fe28397bdb5073a9026.jpg' },
-  { id: 'o3', title: 'Resep Bakwan', price: '25.000', time: '20 Menit', image: 'https://i.pinimg.com/736x/fb/d8/4c/fbd84cc9243979932bfef630eb1f1cb5.jpg' },
-];
-
 export default function HasilRecResepScreen() {
   const router = useRouter();
+  const { saveRecipeView, saving } = useRecipeView();
+  const [recipes, setRecipes] = useState<ResepItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchRecipes = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/recipes`);
+
+        if (!response.ok) {
+          throw new Error(`API error: ${response.status}`);
+        }
+
+        const result = await response.json();
+
+        if (result?.success && Array.isArray(result.data)) {
+          const mappedRecipes = result.data.map((item: any) => ({
+            id: String(item.id),
+            title: item.title || item.name || 'Resep',
+            price: Number(item.totalIngredientPrice || item.price || 0).toLocaleString('id-ID'),
+            time: item.cookingTime ? `${item.cookingTime} Menit` : '20 Menit',
+            image: item.image || item.imageUrl || 'https://via.placeholder.com/300',
+          }));
+
+          setRecipes(mappedRecipes);
+          setError(null);
+        } else {
+          setRecipes([]);
+          setError('Data rekomendasi tidak tersedia');
+        }
+      } catch (err) {
+        console.error('Error fetching recipes:', err);
+        setError(err instanceof Error ? err.message : 'Gagal memuat rekomendasi');
+        setRecipes([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchRecipes();
+  }, []);
+
+  const topRecipes = useMemo(() => recipes.slice(0, 3), [recipes]);
+  const otherRecipes = useMemo(() => recipes.slice(3, 6), [recipes]);
+
+  const handleRecipePress = async (item: ResepItem) => {
+    const success = await saveRecipeView(item.id);
+    if (success) {
+      router.push({
+        pathname: '/detail_resep',
+        params: { 
+          id: item.id,
+          name: item.title, 
+          imageUrl: item.image,
+          price: item.price,
+          time: item.time
+        }
+      });
+    }
+  };
 
   const renderCard = (item: ResepItem) => (
     <TouchableOpacity 
@@ -35,7 +85,7 @@ export default function HasilRecResepScreen() {
       activeOpacity={0.85}
       onPress={() => router.push({
         pathname: '/detail_resep',
-        params: { name: item.title, imageUrl: item.image, price: item.price }
+        params: { id: item.id, name: item.title, imageUrl: item.image, price: item.price, time: item.time }
       })}
     >
       <Image source={{ uri: item.image }} style={styles.cardImage} resizeMode="cover" />
@@ -50,8 +100,14 @@ export default function HasilRecResepScreen() {
             <Text style={styles.cardTime}>{item.time}</Text>
           </View>
         </View>
-
+        <TouchableOpacity onPress={() => handleRecipePress(item)} disabled={saving}>
+          {saving ? (
+            <ActivityIndicator size="small" color="white" />
+          ) : (
+    
         <Text style={styles.detailText}>Lihat Resep</Text>
+          )}
+        </TouchableOpacity>
       </View>
     </TouchableOpacity>
   );
@@ -77,25 +133,40 @@ export default function HasilRecResepScreen() {
           </View>
           
           {/* DAFTAR KONTEN */}
-          <FlatList
-            data={TOP_RECS}
-            keyExtractor={(item) => item.id}
-            renderItem={({ item }) => renderCard(item)}
-            contentContainerStyle={styles.listContent}
-            showsVerticalScrollIndicator={false}
-            ListHeaderComponent={<Text style={styles.sectionTitle}>Rekomendasi Terbaik</Text>}
-            ListFooterComponent={
-              <View style={{ marginTop: 10 }}>
-                <Text style={styles.sectionTitle}>Pilihan Lainnya</Text>
-                {OTHER_RECS.map((item) => renderCard(item))}
-              </View>
-            }
-          />
+          {loading ? (
+            <View style={styles.loadingWrap}>
+              <ActivityIndicator size="large" color="#9E5F3B" />
+              <Text style={styles.loadingText}>Memuat rekomendasi...</Text>
+            </View>
+          ) : error ? (
+            <View style={styles.loadingWrap}>
+              <Text style={styles.errorText}>{error}</Text>
+            </View>
+          ) : (
+            <FlatList
+              data={topRecipes}
+              keyExtractor={(item) => item.id}
+              renderItem={({ item }) => renderCard(item)}
+              contentContainerStyle={styles.listContent}
+              showsVerticalScrollIndicator={false}
+              ListHeaderComponent={<Text style={styles.sectionTitle}>Rekomendasi Terbaik</Text>}
+              ListFooterComponent={
+                <View style={{ marginTop: 10 }}>
+                  <Text style={styles.sectionTitle}>Pilihan Lainnya</Text>
+                  {otherRecipes.length > 0 ? (
+                    otherRecipes.map((item) => renderCard(item))
+                  ) : (
+                    <Text style={styles.emptyText}>Belum ada rekomendasi lain.</Text>
+                  )}
+                </View>
+              }
+            />
+          )}
 
           {/* --- CUSTOM NAVBAR --- */}
           <View style={styles.navbarContainer}>
             <View style={styles.navbar}>
-              <TouchableOpacity style={styles.navItem} onPress={() => router.push('/')}>
+              <TouchableOpacity style={styles.navItem} onPress={() => router.push('/home')}>
                 <Ionicons name="home-outline" size={24} color="white" />
                 <Text style={styles.navText}>Home</Text>
               </TouchableOpacity>
@@ -172,6 +243,10 @@ const styles = StyleSheet.create({
   timeRow: { flexDirection: 'row', alignItems: 'center' },
   cardTime: { color: 'rgba(255, 255, 255, 0.9)', fontSize: 12, marginLeft: 4 },
   detailText: { color: 'white', fontSize: 12, textDecorationLine: 'underline', marginTop: 6, fontWeight: '500' },
+  loadingWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 30 },
+  loadingText: { color: '#8D5B3E', marginTop: 12, fontSize: 14, fontWeight: '600' },
+  errorText: { color: '#B00020', fontSize: 14, textAlign: 'center', fontWeight: '600' },
+  emptyText: { color: '#8D5B3E', fontSize: 13, textAlign: 'center', marginTop: 12 },
   
   // --- BOTTOM FIXED NAVBAR STYLES ---
   navbarContainer: {

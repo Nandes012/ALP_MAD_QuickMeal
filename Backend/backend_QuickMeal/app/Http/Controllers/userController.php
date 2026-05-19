@@ -14,6 +14,7 @@ class UserController extends Controller
     public function register(Request $request)
     {
         $validated = $request->validate([
+
             'name' => 'required|string|max:255',
 
             'email' => [
@@ -23,7 +24,10 @@ class UserController extends Controller
                 'regex:/^[A-Za-z0-9._%+-]+@gmail\.com$/'
             ],
 
-            'password' => 'required|string|min:8|confirmed',
+            'password' => 'required|string|min:8',
+
+            // PROFILE PICTURE VALIDATION
+            'profile_picture' => 'nullable|image|mimes:jpeg,png,jpg,gif,heic|max:2048',
         ]);
 
         // Lowercase email
@@ -35,8 +39,30 @@ class UserController extends Controller
         // Default premium status
         $validated['is_premium'] = false;
 
+        /*
+        |--------------------------------------------------------------------------
+        | Upload Profile Picture
+        |--------------------------------------------------------------------------
+        */
+        if ($request->hasFile('profile_picture')) {
+
+            $filename = time() . '_' . $request->file('profile_picture')->getClientOriginalName();
+            $path = $request->file('profile_picture')
+                            ->storeAs('profile_pictures', $filename, 'public');
+
+            $validated['profile_picture'] = $path;
+        } else {
+            // Use default person.jpg if no picture provided
+            $validated['profile_picture'] = 'profile_pictures/1778642103_person.jpg';
+        }
+
         // Create user
         $user = User::create($validated);
+
+        // Ensure profile_picture has a default value if null
+        if (!$user->profile_picture) {
+            $user->profile_picture = 'profile_pictures/1778642103_person.jpg';
+        }
 
         // Create token
         $token = $user->createToken('auth_token')->plainTextToken;
@@ -55,6 +81,7 @@ class UserController extends Controller
     public function login(Request $request)
     {
         $validated = $request->validate([
+
             'email' => [
                 'required',
                 'email:rfc,dns',
@@ -79,6 +106,11 @@ class UserController extends Controller
             ], 401);
         }
 
+        // Ensure profile_picture has a default value if null
+        if (!$user->profile_picture) {
+            $user->profile_picture = 'profile_pictures/1778642103_person.jpg';
+        }
+
         // Generate token
         $token = $user->createToken('auth_token')->plainTextToken;
 
@@ -95,9 +127,16 @@ class UserController extends Controller
      */
     public function me(Request $request)
     {
+        $user = $request->user();
+        
+        // Ensure profile_picture has a default value if null
+        if (!$user->profile_picture) {
+            $user->profile_picture = 'profile_pictures/1778642103_person.jpg';
+        }
+        
         return response()->json([
             'success' => true,
-            'data' => $request->user()
+            'data' => $user
         ], 200);
     }
 
@@ -116,11 +155,49 @@ class UserController extends Controller
 
     /**
      * GET /api/users
-     * Get ALL users with all columns
      */
-    public function index()
+    public function index(Request $request)
     {
+        // Get authenticated user
+        if ($request->query('me')) {
+
+            $user = $request->user();
+
+            if (!$user) {
+
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthenticated'
+                ], 401);
+            }
+
+            $user = User::with([
+                'orders',
+                'recommendations',
+                'subscriptions'
+            ])->find($user->id);
+
+            // Ensure profile_picture has a default value if null
+            if (!$user->profile_picture) {
+                $user->profile_picture = 'profile_pictures/1778642103_person.jpg';
+            }
+
+            return response()->json([
+                'success' => true,
+                'data' => $user
+            ], 200);
+        }
+
+        // Get all users
         $users = User::all();
+        
+        // Ensure all users have a default profile_picture if null
+        $users = $users->map(function($user) {
+            if (!$user->profile_picture) {
+                $user->profile_picture = 'profile_pictures/1778642103_person.jpg';
+            }
+            return $user;
+        });
 
         return response()->json([
             'success' => true,
@@ -131,7 +208,6 @@ class UserController extends Controller
 
     /**
      * GET /api/users/{id}
-     * Get single user
      */
     public function show($id)
     {
@@ -141,6 +217,11 @@ class UserController extends Controller
             'subscriptions'
         ])->findOrFail($id);
 
+        // Ensure profile_picture has a default value if null
+        if (!$user->profile_picture) {
+            $user->profile_picture = 'profile_pictures/1778642103_person.jpg';
+        }
+
         return response()->json([
             'success' => true,
             'data' => $user
@@ -149,45 +230,106 @@ class UserController extends Controller
 
     /**
      * PUT /api/user
-     * Update current logged-in user
      */
-    public function update(Request $request)
-    {
-        $user = $request->user();
+public function update(Request $request)
+{
+    $user = $request->user();
 
-        $validated = $request->validate([
+    $validated = $request->validate([
 
-            'name' => 'sometimes|string|max:255',
+        'name' => 'sometimes|string|max:255',
 
-            'email' => [
-                'sometimes',
-                'email:rfc,dns',
-                'unique:users,email,' . $user->id,
-                'regex:/^[A-Za-z0-9._%+-]+@gmail\.com$/'
-            ],
+        'email' => [
+            'sometimes',
+            'email:rfc,dns',
+            'unique:users,email,' . $user->id,
+            'regex:/^[A-Za-z0-9._%+-]+@gmail\.com$/'
+        ],
 
-            'password' => 'sometimes|string|min:8|confirmed',
-        ]);
+        'password' => 'sometimes|string|min:8',
 
-        // Lowercase email
-        if (isset($validated['email'])) {
-            $validated['email'] = strtolower($validated['email']);
-        }
+        'profile_picture' =>
+            'nullable|image|mimes:jpeg,png,jpg,gif,webp,heic|max:2048',
 
-        // Hash password
-        if (isset($validated['password'])) {
-            $validated['password'] = Hash::make($validated['password']);
-        }
+        'remove_profile_picture' => 'sometimes|boolean',
+    ]);
 
-        // Update user
-        $user->update($validated);
-
-        return response()->json([
-            'success' => true,
-            'message' => 'User updated successfully',
-            'data' => $user
-        ], 200);
+    // Lowercase email
+    if (isset($validated['email'])) {
+        $validated['email'] = strtolower($validated['email']);
     }
+
+    // Hash password
+    if (isset($validated['password'])) {
+        $validated['password'] = Hash::make($validated['password']);
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | REMOVE PROFILE PICTURE
+    |--------------------------------------------------------------------------
+    */
+if ($request->filled('remove_profile_picture')) {
+
+    // Delete old file
+    if (
+        $user->profile_picture &&
+        file_exists(
+            storage_path('app/public/' . $user->profile_picture)
+        )
+    ) {
+
+        unlink(
+            storage_path('app/public/' . $user->profile_picture)
+        );
+    }
+
+    $validated['profile_picture'] = null;
+}
+
+    /*
+    |--------------------------------------------------------------------------
+    | UPLOAD NEW PROFILE PICTURE
+    |--------------------------------------------------------------------------
+    */
+    if ($request->hasFile('profile_picture')) {
+
+        // Delete old image first
+        if (
+            $user->profile_picture &&
+            file_exists(
+                storage_path('app/public/' . $user->profile_picture)
+            )
+        ) {
+
+            unlink(
+                storage_path('app/public/' . $user->profile_picture)
+            );
+        }
+
+        $file = $request->file('profile_picture');
+
+        $filename =
+            time() . '_' . $file->getClientOriginalName();
+
+        $path = $file->storeAs(
+            'profile_pictures',
+            $filename,
+            'public'
+        );
+
+        $validated['profile_picture'] = $path;
+    }
+
+    // Update user
+    $user->update($validated);
+
+    return response()->json([
+        'success' => true,
+        'message' => 'User updated successfully',
+        'data' => $user
+    ], 200);
+}
 
     /**
      * DELETE /api/users/{id}
@@ -211,6 +353,50 @@ class UserController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'User deleted successfully'
+        ], 200);
+    }
+
+    /**
+     * POST /api/profile/update-picture
+     */
+    public function updateProfilePicture(Request $request)
+    {
+        $user = $request->user();
+
+        $validated = $request->validate([
+            'profile_picture' => 'required|image|mimes:jpeg,png,jpg,gif,webp,heic|max:2048',
+        ]);
+
+        /*
+        |--------------------------------------------------------------------------
+        | DELETE OLD PROFILE PICTURE
+        |--------------------------------------------------------------------------
+        */
+        if (
+            $user->profile_picture &&
+            file_exists(storage_path('app/public/' . $user->profile_picture)) &&
+            $user->profile_picture !== 'profile_pictures/1778642103_person.jpg'
+        ) {
+            unlink(storage_path('app/public/' . $user->profile_picture));
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | UPLOAD NEW PROFILE PICTURE
+        |--------------------------------------------------------------------------
+        */
+        if ($request->hasFile('profile_picture')) {
+            $file = $request->file('profile_picture');
+            $filename = time() . '_' . $file->getClientOriginalName();
+            $path = $file->storeAs('profile_pictures', $filename, 'public');
+            $user->profile_picture = $path;
+            $user->save();
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Profile picture updated successfully',
+            'data' => $user
         ], 200);
     }
 }
