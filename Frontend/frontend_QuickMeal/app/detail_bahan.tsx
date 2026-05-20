@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, Text, View, Image, TouchableOpacity, ScrollView, Platform, StatusBar, ActivityIndicator } from 'react-native';
+import { StyleSheet, Text, View, Image, TouchableOpacity, ScrollView, Platform, StatusBar, ActivityIndicator, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons'; 
@@ -19,6 +19,7 @@ type Location = {
   id_location: string;
   location_name: string;
   location_picture?: string | null;
+  google_maps_link?: string | null;
   opening_time?: string | null;
   closing_time?: string | null;
   pivot?: {
@@ -95,11 +96,29 @@ export default function DetailBahan() {
 
   const bahanName = (ingredient?.name || params.name ? String(ingredient?.name || params.name) : 'Bahan').replace(/\s+/g, ' ').trim();
   
-  // Construct full image URL - handle both relative and absolute URLs
   const getFullImageUrl = (imagePath: string | null | undefined): string => {
     if (!imagePath) return 'https://via.placeholder.com/300';
     if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) return imagePath;
     return `${API_BASE_URL}${imagePath.startsWith('/') ? imagePath : '/' + imagePath}`;
+  };
+
+  const handleOpenMaps = async (locationLink: string | null | undefined) => {
+    if (!locationLink) {
+      alert('Link lokasi tidak tersedia');
+      return;
+    }
+
+    try {
+      const canOpen = await Linking.canOpenURL(locationLink);
+      if (canOpen) {
+        await Linking.openURL(locationLink);
+      } else {
+        alert('Tidak bisa membuka link lokasi');
+      }
+    } catch (error) {
+      console.error('Error opening maps:', error);
+      alert('Terjadi kesalahan saat membuka Google Maps');
+    }
   };
   
   const bahanImage = getFullImageUrl(ingredient?.ingredient_picture || (params.imageUrl ? String(params.imageUrl) : null));
@@ -189,11 +208,13 @@ export default function DetailBahan() {
                 {processedLocations.map((location) => (
                   <View key={location.id_location} style={styles.locationItem}>
                     {location.fullImageUrl && (
-                      <Image
-                        source={{ uri: location.fullImageUrl }}
-                        style={styles.locationImage}
-                        resizeMode="cover"
-                      />
+                      <TouchableOpacity onPress={() => handleOpenMaps(location.google_maps_link)}>
+                        <Image
+                          source={{ uri: location.fullImageUrl }}
+                          style={styles.locationImage}
+                          resizeMode="cover"
+                        />
+                      </TouchableOpacity>
                     )}
                     <View style={styles.locationInfo}>
                       <Text style={styles.locationName}>{location.location_name}</Text>
