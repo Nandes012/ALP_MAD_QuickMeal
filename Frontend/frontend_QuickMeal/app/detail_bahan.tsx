@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, Text, View, Image, TouchableOpacity, ScrollView, Platform, StatusBar, ActivityIndicator } from 'react-native';
+import { StyleSheet, Text, View, Image, TouchableOpacity, ScrollView, Platform, StatusBar, ActivityIndicator, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons'; 
@@ -12,6 +12,23 @@ type IngredientDetail = {
   name: string;
   ingredient_picture?: string | null;
   price_per_kg?: number | null;
+  locations?: Location[];
+};
+
+type Location = {
+  id_location: string;
+  location_name: string;
+  road_name?: string | null;
+  location_picture?: string | null;
+  google_maps_link?: string | null;
+  opening_time?: string | null;
+  closing_time?: string | null;
+  pivot?: {
+    ingredient_id: string;
+    id_location: string;
+    created_at?: string;
+    updated_at?: string;
+  };
 };
 
 export default function DetailBahan() {
@@ -20,6 +37,7 @@ export default function DetailBahan() {
   const ingredientId = params.id ? String(params.id) : '';
   
   const [ingredient, setIngredient] = useState<IngredientDetail | null>(null);
+  const [locations, setLocations] = useState<Location[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -53,17 +71,77 @@ export default function DetailBahan() {
       }
     };
 
+    const fetchLocations = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/ingredients/${ingredientId}/locations`);
+
+        if (!response.ok) {
+          throw new Error(`API error: ${response.status}`);
+        }
+
+        const result = await response.json();
+
+        if (result?.success && Array.isArray(result.data)) {
+          setLocations(result.data);
+        }
+      } catch (locError) {
+        console.error('Error fetching locations:', locError);
+      }
+    };
+
     fetchIngredient();
+    if (ingredientId) {
+      fetchLocations();
+    }
   }, [ingredientId]);
 
   const bahanName = (ingredient?.name || params.name ? String(ingredient?.name || params.name) : 'Bahan').replace(/\s+/g, ' ').trim();
-  const bahanImage = ingredient?.ingredient_picture || (params.imageUrl ? String(params.imageUrl) : 'https://via.placeholder.com/300');
+  
+  const getFullImageUrl = (imagePath: string | null | undefined): string => {
+    if (!imagePath) return 'https://via.placeholder.com/300';
+    if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) return imagePath;
+    return `${API_BASE_URL}${imagePath.startsWith('/') ? imagePath : '/' + imagePath}`;
+  };
+
+  const handleOpenMaps = async (locationLink: string | null | undefined) => {
+    if (!locationLink) {
+      alert('Link lokasi tidak tersedia');
+      return;
+    }
+
+    try {
+      const canOpen = await Linking.canOpenURL(locationLink);
+      if (canOpen) {
+        await Linking.openURL(locationLink);
+      } else {
+        alert('Tidak bisa membuka link lokasi');
+      }
+    } catch (error) {
+      console.error('Error opening maps:', error);
+      alert('Terjadi kesalahan saat membuka Google Maps');
+    }
+  };
+  
+  const bahanImage = getFullImageUrl(ingredient?.ingredient_picture || (params.imageUrl ? String(params.imageUrl) : null));
   const bahanPriceValue = typeof ingredient?.price_per_kg === 'number'
     ? Number(ingredient.price_per_kg).toLocaleString('id-ID')
     : params.price
       ? String(params.price)
       : '0';
 
+<<<<<<< HEAD
+=======
+  // Membuat visual estimasi harga batas bawah otomatis secara dinamis
+  const basePriceNum = parseInt(bahanPriceValue.replace(/\./g, ''), 10);
+  const minPriceCalculated = isNaN(basePriceNum) ? '0' : Number(Math.max(basePriceNum - 4000, 0)).toLocaleString('id-ID');
+
+  // Process locations with full image URLs
+  const processedLocations = locations.map(location => ({
+    ...location,
+    fullImageUrl: getFullImageUrl(location.location_picture)
+  }));
+
+>>>>>>> be52ec3f6221f3ec66ae97b798274d9eaef366dd
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
@@ -153,6 +231,45 @@ export default function DetailBahan() {
               </View>
             </View>
 
+<<<<<<< HEAD
+=======
+            {/* Separator Line */}
+            <View style={{ height: 1, backgroundColor: 'rgba(255, 255, 255, 0.3)', marginVertical: 12 }} />
+
+            {locations.length > 0 ? (
+              <View>
+                <Text style={styles.locationTitle}>Tersedia di Lokasi:</Text>
+                {processedLocations.map((location) => (
+                  <View key={location.id_location} style={styles.locationItem}>
+                    {location.fullImageUrl && (
+                      <TouchableOpacity onPress={() => handleOpenMaps(location.google_maps_link)}>
+                        <Image
+                          source={{ uri: location.fullImageUrl }}
+                          style={styles.locationImage}
+                          resizeMode="cover"
+                        />
+                      </TouchableOpacity>
+                    )}
+                    <View style={styles.locationInfo}>
+                      <Text style={styles.locationName}>{location.location_name}</Text>
+                      {location.road_name && (
+                        <Text style={styles.locationRoad}>{location.road_name}</Text>
+                      )}
+                      {location.opening_time && location.closing_time ? (
+                        <Text style={styles.locationTime}>
+                          {location.opening_time} - {location.closing_time}
+                        </Text>
+                      ) : (
+                        <Text style={styles.locationTime}>Jam operasional tidak tersedia</Text>
+                      )}
+                    </View>
+                  </View>
+                ))}
+              </View>
+            ) : (
+              <Text style={styles.noteText}>Data lokasi belum tersedia dari backend.</Text>
+            )}
+>>>>>>> be52ec3f6221f3ec66ae97b798274d9eaef366dd
           </View>
 
           {/* FOOTER PERINGATAN */}
@@ -183,6 +300,7 @@ const styles = StyleSheet.create({
   infoTitle: { fontSize: 26, color: '#FFFFFF', textAlign: 'center', fontWeight: 'bold', fontFamily: Platform.OS === 'android' ? 'serif' : 'Georgia', marginBottom: 25 },
   infoRow: { flexDirection: 'row', marginBottom: 12, alignItems: 'center' },
   infoLabel: { width: 95, fontSize: 14, color: '#FFFFFF', fontWeight: '500' },
+<<<<<<< HEAD
   infoSeparator: { width: 20, fontSize: 14, color: '#FFFFFF', textAlign: 'center' },
   infoValue: { flex: 1, fontSize: 14, color: '#FFFFFF', fontWeight: '500', lineHeight: 18 },
   
@@ -193,4 +311,17 @@ const styles = StyleSheet.create({
   mapBadgeText: { color: '#9E5F3B', fontSize: 11, fontWeight: 'bold', marginLeft: 4 },
   
   warningText: { textAlign: 'center', color: '#9E5F3B', opacity: 0.6, fontSize: 12, marginTop: 30, fontStyle: 'italic', paddingHorizontal: 10 },
+=======
+  infoSeparator: { width: 20, fontSize: 14, color: '#FFFFFF' },
+  infoValue: { flex: 1, fontSize: 14, color: '#FFFFFF', fontWeight: '500' },
+  noteText: { color: '#FFFFFF', fontSize: 12, marginTop: 18, opacity: 0.85, fontStyle: 'italic' },
+  locationTitle: { fontSize: 16, color: '#FFFFFF', fontWeight: '600', marginTop: 18, marginBottom: 12 },
+  locationItem: { backgroundColor: 'rgba(255, 255, 255, 0.15)', borderRadius: 12, marginBottom: 10, overflow: 'hidden' },
+  locationImage: { width: '100%', height: 120, backgroundColor: '#EEE' },
+  locationInfo: { padding: 12 },
+  locationName: { fontSize: 14, color: '#FFFFFF', fontWeight: '600' },
+  locationRoad: { fontSize: 12, color: '#FFFFFF', marginTop: 2, opacity: 0.85 },
+  locationTime: { fontSize: 12, color: '#FFFFFF', marginTop: 4, opacity: 0.9 },
+  warningText: { textAlign: 'center', color: '#9E5F3B', opacity: 0.6, fontSize: 12, marginTop: 30, fontStyle: 'italic' },
+>>>>>>> be52ec3f6221f3ec66ae97b798274d9eaef366dd
 });

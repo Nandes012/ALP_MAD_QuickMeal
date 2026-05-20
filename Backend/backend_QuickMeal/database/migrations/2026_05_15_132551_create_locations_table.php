@@ -16,6 +16,8 @@ return new class extends Migration
 
             $table->string('location_name');
 
+            $table->string('road_name')->nullable();
+
             $table->text('location_picture');
 
             $table->text('google_maps_link');

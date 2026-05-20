@@ -37,5 +37,7 @@ class DatabaseSeeder extends Seeder
         $this->call(OrderSeeder::class);
                 // Seed locations
         $this->call(LocationSeeder::class);
+                // Seed ingredient-location mapping 
+        $this->call(IngredientLocationSeeder::class);
     }
 }

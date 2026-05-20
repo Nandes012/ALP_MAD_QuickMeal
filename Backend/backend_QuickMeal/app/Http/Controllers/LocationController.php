@@ -48,16 +48,22 @@ class LocationController extends Controller
     {
         $validated = $request->validate([
             'location_name' => 'required|string|max:255',
+            'road_name' => 'nullable|string|max:255',
             'location_picture' => 'required|string',
             'google_maps_link' => 'required|string',
+            'opening_time' => 'nullable|date_format:H:i',
+            'closing_time' => 'nullable|date_format:H:i',
             'ingredient_ids' => 'nullable|array',
             'ingredient_ids.*' => 'exists:ingredients,id',
         ]);
 
         $location = Location::create([
             'location_name' => $validated['location_name'],
+            'road_name' => $validated['road_name'] ?? null,
             'location_picture' => $validated['location_picture'],
             'google_maps_link' => $validated['google_maps_link'],
+            'opening_time' => $validated['opening_time'] ?? null,
+            'closing_time' => $validated['closing_time'] ?? null,
         ]);
 
         if (!empty($validated['ingredient_ids'])) {
@@ -87,8 +93,11 @@ class LocationController extends Controller
 
         $validated = $request->validate([
             'location_name' => 'sometimes|string|max:255',
+            'road_name' => 'nullable|string|max:255',
             'location_picture' => 'sometimes|string',
             'google_maps_link' => 'sometimes|string',
+            'opening_time' => 'nullable|date_format:H:i',
+            'closing_time' => 'nullable|date_format:H:i',
             'ingredient_ids' => 'nullable|array',
             'ingredient_ids.*' => 'exists:ingredients,id',
         ]);
