@@ -16,6 +16,9 @@ return new class extends Migration
             // Picture URL
             $table->string('ingredient_picture')->nullable();
 
+            // Video stored in database
+            $table->text('ingredient_video')->nullable();
+
             // Price per kilogram
             $table->integer('price_per_kg')->default(0);
 
