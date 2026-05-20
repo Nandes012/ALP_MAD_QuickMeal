@@ -11,6 +11,7 @@ class Location extends Model
 
     protected $fillable = [
         'location_name',
+        'road_name',
         'location_picture',
         'google_maps_link',
         'opening_time',
