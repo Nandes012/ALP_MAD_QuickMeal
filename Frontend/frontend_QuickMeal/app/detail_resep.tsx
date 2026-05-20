@@ -4,6 +4,7 @@ import { VideoView, useVideoPlayer } from 'expo-video';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import * as ScreenOrientation from 'expo-screen-orientation';
 import { API_BASE_URL } from '@/constants/api';
 import { useRecipeView } from '@/hooks/useRecipeView';
 import CustomNavbar from '../components/CustomNavbar';
@@ -107,7 +108,7 @@ export default function DetailResepScreen() {
     fetchRecipeDetail();
   }, [recipeId, saveRecipeView]);
 
-  const handlePlayVideo = () => {
+  const handlePlayVideo = async () => {
     if (!recipe?.video) {
       alert('tidak ada video untuk resep ini terlebih dahulu');
       return;
@@ -116,12 +117,18 @@ export default function DetailResepScreen() {
     console.log('Playing video URL:', fullUrl);
     setVideoUrl(fullUrl);
     setIsPlayingVideo(true);
+    await ScreenOrientation.unlockAsync();
   };
 
-  const handleStopVideo = () => {
+  const handleStopVideo = async () => {
     setIsPlayingVideo(false);
     setIsVideoFullscreen(false);
     player.pause();
+    await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT);
+  };
+
+  const handleRotateLandscape = async () => {
+    await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE);
   };
 
   if (loading) {
@@ -188,6 +195,11 @@ export default function DetailResepScreen() {
             <TouchableOpacity style={styles.closeVideoButton} onPress={handleStopVideo}>
               <Ionicons name="close" size={28} color="white" />
             </TouchableOpacity>
+            {isVideoFullscreen && (
+              <TouchableOpacity style={styles.rotateButton} onPress={handleRotateLandscape}>
+                <Ionicons name="swap-horizontal" size={24} color="white" />
+              </TouchableOpacity>
+            )}
           </View>
         ) : (
           <View style={styles.imageContainer}>
@@ -322,6 +334,7 @@ const styles = StyleSheet.create({
   videoOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 100 },
   videoFullscreen: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, width: '100%', height: '100%', zIndex: 1000 },
   closeVideoButton: { position: 'absolute', top: 10, right: 10, backgroundColor: 'rgba(0, 0, 0, 0.6)', width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center', zIndex: 10 },
+  rotateButton: { position: 'absolute', bottom: 20, left: 20, backgroundColor: 'rgba(0, 0, 0, 0.6)', width: 45, height: 45, borderRadius: 22.5, justifyContent: 'center', alignItems: 'center', zIndex: 10 },
   fullscreenButton: { position: 'absolute', bottom: 50, right: 10, backgroundColor: 'rgba(0, 0, 0, 0.6)', width: 45, height: 45, borderRadius: 22.5, justifyContent: 'center', alignItems: 'center', zIndex: 10 },
   summaryCard: { backgroundColor: '#FFFFFF', borderRadius: 18, padding: 16, borderWidth: 1, borderColor: '#EFE3D5', marginTop: 15, marginBottom: 16, elevation: 1 },
   recipeTitle: { fontSize: 18, fontWeight: '700', color: '#333333', marginBottom: 8, fontFamily: Platform.OS === 'android' ? 'serif' : 'Georgia' },
