@@ -145,8 +145,8 @@ export default function HasilRecResepScreen() {
                     Waktu: {Math.floor(Number(time) / 60)}h {Number(time) % 60}m
                   </Text>
                 )}
-                {(budgetMin || budgetMax) && <Text style={{ color: 'white', fontSize: 12, marginBottom: 4 }}>💰 Budget: Rp {budgetMin} - Rp {budgetMax}</Text>}
-                {ingredients && <Text style={{ color: 'white', fontSize: 12 }}>🥘 Bahan: {ingredients}</Text>}
+                {(budgetMin || budgetMax) && <Text style={{ color: 'white', fontSize: 12, marginBottom: 4 }}>Budget: Rp {budgetMin} - Rp {budgetMax}</Text>}
+                {ingredients && <Text style={{ color: 'white', fontSize: 12 }}>Bahan: {ingredients}</Text>}
               </View>
             )}
           </View>
