@@ -12,7 +12,8 @@ function FormField({ label, error, ...inputProps }: any) {
   return (
     <View style={localStyles.fieldWrap}>
       <Text style={localStyles.label}>{label}</Text>
-      <CustomInput {...inputProps} />
+      {/* 🌟 Ditambahkan placeholderTextColor agar diteruskan ke komponen CustomInput bawaanmu */}
+      <CustomInput placeholderTextColor="#A0A0A0" {...inputProps} />
       {error ? <Text style={localStyles.errorText}>{error}</Text> : null}
     </View>
   );
@@ -168,7 +169,7 @@ export default function SignupForm({ onSignup }: Readonly<{ onSignup?: (data: an
 
       <FormField 
         label="Name" 
-        placeholder="St mutmainnah" 
+        placeholder="Enter your name" 
         value={name} 
         onChangeText={(text: string) => {
           setName(text);
@@ -179,7 +180,7 @@ export default function SignupForm({ onSignup }: Readonly<{ onSignup?: (data: an
 
       <FormField 
         label="Email" 
-        placeholder="smutmainnah@..." 
+        placeholder="Enter your email" 
         value={email} 
         onChangeText={(text: string) => {
           setEmail(text);
@@ -191,7 +192,7 @@ export default function SignupForm({ onSignup }: Readonly<{ onSignup?: (data: an
 
       <FormField 
         label="Password" 
-        placeholder="Gowa020627" 
+        placeholder="Enter your password" 
         value={password} 
         onChangeText={(text: string) => {
           setPassword(text);
@@ -203,7 +204,7 @@ export default function SignupForm({ onSignup }: Readonly<{ onSignup?: (data: an
 
       <FormField 
         label="Confirm Password" 
-        placeholder="Gowa020627" 
+        placeholder="Enter your password again" 
         value={confirmPassword} 
         onChangeText={(text: string) => {
           setConfirmPassword(text);
@@ -222,11 +223,7 @@ export default function SignupForm({ onSignup }: Readonly<{ onSignup?: (data: an
   );
 }
 
-// form styles moved to shared styles
-
 const localStyles = StyleSheet.create({
-  // keep spacing consistent with LoginForm: CustomInput already adds bottom margin,
-  // so avoid duplicating it here.
   fieldWrap: { marginBottom: 0 },
   label: {
     marginBottom: 8,

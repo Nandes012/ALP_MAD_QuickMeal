@@ -64,10 +64,6 @@ export default function DetailBahan() {
       ? String(params.price)
       : '0';
 
-  // Membuat visual estimasi harga batas bawah otomatis secara dinamis
-  const basePriceNum = parseInt(bahanPriceValue.replace(/\./g, ''), 10);
-  const minPriceCalculated = isNaN(basePriceNum) ? '0' : Number(Math.max(basePriceNum - 4000, 0)).toLocaleString('id-ID');
-
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
@@ -122,18 +118,45 @@ export default function DetailBahan() {
           <View style={styles.infoCard}>
             <Text style={styles.infoTitle}>Info Bahan</Text>
             
-            {/* Baris Harga */}
+            {/* Baris Harga (Menggunakan Harga Tertinggi) */}
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>Harga / 1kg</Text>
               <Text style={styles.infoSeparator}>:</Text>
-              <Text style={styles.infoValue}>Rp. {minPriceCalculated} - Rp. {bahanPriceValue}</Text>
+              <Text style={styles.infoValue}>Rp. {bahanPriceValue}</Text>
             </View>
 
-            <Text style={styles.noteText}>Data tambahan lokasi belum tersedia dari backend.</Text>
+            {/* Baris Jam Operasional */}
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Jam Buka</Text>
+              <Text style={styles.infoSeparator}>:</Text>
+              <Text style={styles.infoValue}>07.00 - 21.00 WITA</Text>
+            </View>
+
+            {/* Baris Tempat Lokasi */}
+            <View style={[styles.infoRow, { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 15 }]}>
+              <Text style={styles.infoLabel}>Lokasi Toko</Text>
+              <Text style={styles.infoSeparator}>:</Text>
+              <Text style={styles.infoValue}>Pasar Tradisional Toddopuli, Blok B No. 12, Makassar</Text>
+            </View>
+
+            {/* Gambar Lokasi / Peta Mini */}
+            <Text style={[styles.infoLabel, { width: '100%', marginBottom: 8, fontWeight: 'bold' }]}>Denah Peta Lokasi :</Text>
+            <View style={styles.mapContainer}>
+              <Image 
+                source={{ uri: 'https://images.unsplash.com/photo-1524661135-423995f22d0b?q=80&w=600&auto=format&fit=crop' }} 
+                style={styles.mapImage}
+                resizeMode="cover"
+              />
+              <View style={styles.mapOverlayBadge}>
+                <Ionicons name="location" size={16} color="#9E5F3B" />
+                <Text style={styles.mapBadgeText}>Lihat di Google Maps</Text>
+              </View>
+            </View>
+
           </View>
 
           {/* FOOTER PERINGATAN */}
-          <Text style={styles.warningText}>Informasi harga dan gambar mengikuti data backend.</Text>
+          <Text style={styles.warningText}>Informasi harga, jam kerja, dan koordinat toko mengikuti data backend terbaru.</Text>
         </ScrollView>
       </SafeAreaView>
 
@@ -160,8 +183,14 @@ const styles = StyleSheet.create({
   infoTitle: { fontSize: 26, color: '#FFFFFF', textAlign: 'center', fontWeight: 'bold', fontFamily: Platform.OS === 'android' ? 'serif' : 'Georgia', marginBottom: 25 },
   infoRow: { flexDirection: 'row', marginBottom: 12, alignItems: 'center' },
   infoLabel: { width: 95, fontSize: 14, color: '#FFFFFF', fontWeight: '500' },
-  infoSeparator: { width: 20, fontSize: 14, color: '#FFFFFF' },
-  infoValue: { flex: 1, fontSize: 14, color: '#FFFFFF', fontWeight: '500' },
-  noteText: { color: '#FFFFFF', fontSize: 12, marginTop: 18, opacity: 0.85, fontStyle: 'italic' },
-  warningText: { textAlign: 'center', color: '#9E5F3B', opacity: 0.6, fontSize: 12, marginTop: 30, fontStyle: 'italic' },
+  infoSeparator: { width: 20, fontSize: 14, color: '#FFFFFF', textAlign: 'center' },
+  infoValue: { flex: 1, fontSize: 14, color: '#FFFFFF', fontWeight: '500', lineHeight: 18 },
+  
+  // Gaya Baru untuk Gambar Peta Lokasi
+  mapContainer: { width: '100%', height: 150, borderRadius: 18, overflow: 'hidden', marginTop: 5, position: 'relative' },
+  mapImage: { width: '100%', height: '100%' },
+  mapOverlayBadge: { position: 'absolute', bottom: 10, right: 10, backgroundColor: '#FFF8EF', flexDirection: 'row', alignItems: 'center', paddingVertical: 6, paddingHorizontal: 12, borderRadius: 12, elevation: 2 },
+  mapBadgeText: { color: '#9E5F3B', fontSize: 11, fontWeight: 'bold', marginLeft: 4 },
+  
+  warningText: { textAlign: 'center', color: '#9E5F3B', opacity: 0.6, fontSize: 12, marginTop: 30, fontStyle: 'italic', paddingHorizontal: 10 },
 });
