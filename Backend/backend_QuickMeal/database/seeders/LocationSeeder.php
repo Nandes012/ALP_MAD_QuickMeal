@@ -15,6 +15,7 @@ class LocationSeeder extends Seeder
         $locations = [
             [
                 'location_name' => 'Pasar Butung Makassar',
+                'road_name' => 'Jl. Butung, Makassar',
                 'location_picture' => 'https://img.antaranews.com/cache/1200x800/2023/04/10/IMG-20230410-WA0052.jpg.webp',
                 'google_maps_link' => 'https://maps.google.com/?q=Pasar+Butung+Makassar',
                 'opening_time' => '06:00',
@@ -22,6 +23,7 @@ class LocationSeeder extends Seeder
             ],
             [
                 'location_name' => 'Pasar Terong Makassar',
+                'road_name' => 'Jl. Terong, Makassar',
                 'location_picture' => 'https://img.antaranews.com/cache/1200x800/2023/04/10/IMG-20230410-WA0052.jpg.webp',
                 'google_maps_link' => 'https://maps.google.com/?q=Pasar+Butung+Makassar',
                 'opening_time' => '06:00',
@@ -29,6 +31,7 @@ class LocationSeeder extends Seeder
             ],
             [
                 'location_name' => 'Hypermart Panakkukang',
+                'road_name' => 'Jl. Sultan Hasanuddin, Makassar',
                 'location_picture' => 'https://img.antaranews.com/cache/1200x800/2023/04/10/IMG-20230410-WA0052.jpg.webp',
                 'google_maps_link' => 'https://maps.google.com/?q=Pasar+Butung+Makassar',
                 'opening_time' => '10:00',
@@ -36,6 +39,7 @@ class LocationSeeder extends Seeder
             ],
             [
                 'location_name' => 'Lotte Mart Makassar',
+                'road_name' => 'Jl. AP. Pettarani, Makassar',
                 'location_picture' => 'https://img.antaranews.com/cache/1200x800/2023/04/10/IMG-20230410-WA0052.jpg.webp',
                 'google_maps_link' => 'https://maps.google.com/?q=Pasar+Butung+Makassar',
                 'opening_time' => '10:00',
@@ -43,6 +47,7 @@ class LocationSeeder extends Seeder
             ],
             [
                 'location_name' => 'Pasar Pa\'baeng-Baeng',
+                'road_name' => 'Jl. Pa\'baeng-Baeng, Makassar',
                 'location_picture' => 'https://img.antaranews.com/cache/1200x800/2023/04/10/IMG-20230410-WA0052.jpg.webp',
                 'google_maps_link' => 'https://maps.google.com/?q=Pasar+Butung+Makassar',
                 'opening_time' => '06:00',

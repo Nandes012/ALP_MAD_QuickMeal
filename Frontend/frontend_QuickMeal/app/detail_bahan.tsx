@@ -18,6 +18,7 @@ type IngredientDetail = {
 type Location = {
   id_location: string;
   location_name: string;
+  road_name?: string | null;
   location_picture?: string | null;
   google_maps_link?: string | null;
   opening_time?: string | null;
@@ -218,6 +219,9 @@ export default function DetailBahan() {
                     )}
                     <View style={styles.locationInfo}>
                       <Text style={styles.locationName}>{location.location_name}</Text>
+                      {location.road_name && (
+                        <Text style={styles.locationRoad}>{location.road_name}</Text>
+                      )}
                       {location.opening_time && location.closing_time ? (
                         <Text style={styles.locationTime}>
                           {location.opening_time} - {location.closing_time}
@@ -270,6 +274,7 @@ const styles = StyleSheet.create({
   locationImage: { width: '100%', height: 120, backgroundColor: '#EEE' },
   locationInfo: { padding: 12 },
   locationName: { fontSize: 14, color: '#FFFFFF', fontWeight: '600' },
+  locationRoad: { fontSize: 12, color: '#FFFFFF', marginTop: 2, opacity: 0.85 },
   locationTime: { fontSize: 12, color: '#FFFFFF', marginTop: 4, opacity: 0.9 },
   warningText: { textAlign: 'center', color: '#9E5F3B', opacity: 0.6, fontSize: 12, marginTop: 30, fontStyle: 'italic' },
 });
