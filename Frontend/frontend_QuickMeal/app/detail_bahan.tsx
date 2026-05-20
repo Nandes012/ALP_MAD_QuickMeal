@@ -193,11 +193,18 @@ export default function DetailBahan() {
           <View style={styles.infoCard}>
             <Text style={styles.infoTitle}>Info Bahan</Text>
             
-            {/* Baris Harga */}
+            {/* Baris Harga (Menggunakan Harga Tertinggi) */}
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>Harga / 1kg</Text>
               <Text style={styles.infoSeparator}>:</Text>
-              <Text style={styles.infoValue}>Rp. {minPriceCalculated} - Rp. {bahanPriceValue}</Text>
+              <Text style={styles.infoValue}>Rp. {bahanPriceValue}</Text>
+            </View>
+
+            {/* Baris Jam Operasional */}
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Jam Buka</Text>
+              <Text style={styles.infoSeparator}>:</Text>
+              <Text style={styles.infoValue}>07.00 - 21.00 WITA</Text>
             </View>
 
             {/* Separator Line */}
@@ -239,7 +246,7 @@ export default function DetailBahan() {
           </View>
 
           {/* FOOTER PERINGATAN */}
-          <Text style={styles.warningText}>Informasi harga dan gambar mengikuti data backend.</Text>
+          <Text style={styles.warningText}>Informasi harga, jam kerja, dan koordinat toko mengikuti data backend terbaru.</Text>
         </ScrollView>
       </SafeAreaView>
 
@@ -266,8 +273,10 @@ const styles = StyleSheet.create({
   infoTitle: { fontSize: 26, color: '#FFFFFF', textAlign: 'center', fontWeight: 'bold', fontFamily: Platform.OS === 'android' ? 'serif' : 'Georgia', marginBottom: 25 },
   infoRow: { flexDirection: 'row', marginBottom: 12, alignItems: 'center' },
   infoLabel: { width: 95, fontSize: 14, color: '#FFFFFF', fontWeight: '500' },
-  infoSeparator: { width: 20, fontSize: 14, color: '#FFFFFF' },
-  infoValue: { flex: 1, fontSize: 14, color: '#FFFFFF', fontWeight: '500' },
+  infoSeparator: { width: 20, fontSize: 14, color: '#FFFFFF', textAlign: 'center' },
+  infoValue: { flex: 1, fontSize: 14, color: '#FFFFFF', fontWeight: '500', lineHeight: 18 },
+  
+  warningText: { textAlign: 'center', color: '#9E5F3B', opacity: 0.6, fontSize: 12, marginTop: 30, fontStyle: 'italic', paddingHorizontal: 10 },
   noteText: { color: '#FFFFFF', fontSize: 12, marginTop: 18, opacity: 0.85, fontStyle: 'italic' },
   locationTitle: { fontSize: 16, color: '#FFFFFF', fontWeight: '600', marginTop: 18, marginBottom: 12 },
   locationItem: { backgroundColor: 'rgba(255, 255, 255, 0.15)', borderRadius: 12, marginBottom: 10, overflow: 'hidden' },
@@ -276,5 +285,4 @@ const styles = StyleSheet.create({
   locationName: { fontSize: 14, color: '#FFFFFF', fontWeight: '600' },
   locationRoad: { fontSize: 12, color: '#FFFFFF', marginTop: 2, opacity: 0.85 },
   locationTime: { fontSize: 12, color: '#FFFFFF', marginTop: 4, opacity: 0.9 },
-  warningText: { textAlign: 'center', color: '#9E5F3B', opacity: 0.6, fontSize: 12, marginTop: 30, fontStyle: 'italic' },
 });
