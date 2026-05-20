@@ -1,18 +1,27 @@
-import React, { useState } from 'react';
-import { StyleSheet, Text, View, TextInput, TouchableOpacity, ImageBackground, Dimensions, ScrollView } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { StyleSheet, Text, View, TextInput, TouchableOpacity, ImageBackground, Dimensions, ScrollView, Modal, FlatList, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { API_BASE_URL } from '../constants/api';
 
 export default function FromResepScreen() {
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [bahan, setBahan] = useState(['', '', '']);
+  const [budgetMin, setBudgetMin] = useState('');
+  const [budgetMax, setBudgetMax] = useState('');
 
   // 🌟 Logic State untuk Jam, Menit, Detik aktif
   const [hours, setHours] = useState(0);
   const [minutes, setMinutes] = useState(0);
   const [seconds, setSeconds] = useState(0);
+
+  // 🌟 State untuk ingredients dropdown
+  const [ingredients, setIngredients] = useState<any[]>([]);
+  const [loadingIngredients, setLoadingIngredients] = useState(false);
+  const [dropdownVisibleIndex, setDropdownVisibleIndex] = useState<number | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   // 🌟 Membuat array pilihan angka formal
   const hoursArray = Array.from({ length: 24 }, (_, i) => i);
@@ -20,7 +29,32 @@ export default function FromResepScreen() {
   const secondsArray = Array.from({ length: 60 }, (_, i) => i);
 
   // Tinggi item satuan untuk kalkulasi snapping scroll otomatis
-  const ITEM_HEIGHT = 40; 
+  const ITEM_HEIGHT = 40;
+
+  // 🌟 Fetch ingredients dari API
+  useEffect(() => {
+    const fetchIngredients = async () => {
+      setLoadingIngredients(true);
+      try {
+        const response = await fetch(`${API_BASE_URL}/ingredients`);
+        if (!response.ok) {
+          throw new Error(`API error: ${response.status}`);
+        }
+        const data = await response.json();
+        const ingredientList = data.data || data || [];
+        setIngredients(Array.isArray(ingredientList) ? ingredientList : []);
+      } catch (error) {
+        console.error('Error fetching ingredients:', error);
+        setIngredients([]);
+      } finally {
+        setLoadingIngredients(false);
+      }
+    };
+
+    if (step === 3) {
+      fetchIngredients();
+    }
+  }, [step]); 
 
   // 🌟 Fungsi untuk memperbarui teks bahan tertentu
   const handleBahanChange = (text: string, index: number) => {
@@ -42,9 +76,52 @@ export default function FromResepScreen() {
     }
   };
 
+  // 🌟 Fungsi untuk cek apakah tombol Next bisa diklik
+  const isNextDisabled = () => {
+    if (step === 1) {
+      return hours === 0 && minutes === 0 && seconds === 0;
+    } else if (step === 2) {
+      return !budgetMin.trim() || !budgetMax.trim();
+    } else if (step === 3) {
+      return bahan.some(b => !b.trim());
+    }
+    return false;
+  };
+
   const nextStep = () => {
+    // Validate current step before proceeding
+    if (step === 2) {
+      // Check budget fields are filled
+      if (!budgetMin.trim() || !budgetMax.trim()) {
+        alert('Harap isi kedua field budget sebelum melanjutkan');
+        return;
+      }
+    } else if (step === 3) {
+      // Check that no ingredient field is empty
+      const hasEmptyBahan = bahan.some(b => !b.trim());
+      if (hasEmptyBahan) {
+        alert('Harap isi semua field bahan sebelum melanjutkan');
+        return;
+      }
+    }
+
     if (step < 3) setStep(step + 1);
-    else router.push('/hasil_rec_resep');
+    else {
+      // Convert time to total minutes
+      const totalMinutes = (hours * 60) + minutes + Math.round(seconds / 60);
+      
+      // Prepare data to pass to hasil_rec_resep
+      const formData = {
+        time: totalMinutes.toString(),
+        budgetMin: budgetMin,
+        budgetMax: budgetMax,
+        ingredients: bahan.join(',')
+      };
+      router.push({
+        pathname: '/hasil_rec_resep',
+        params: formData
+      });
+    }
   };
 
   // 🌟 Fungsi pembantu render kolom gulir roda jam dengan Label yang Jelas
@@ -174,6 +251,11 @@ export default function FromResepScreen() {
                     <Text style={{ fontSize: 11, color: '#9E5F3B', opacity: 0.6, marginTop: 8, fontStyle: 'italic' }}>
                       *Scroll atas-bawah angka atau ketik langsung pada kotak nomor
                     </Text>
+                    {hours === 0 && minutes === 0 && seconds === 0 && (
+                      <Text style={{ fontSize: 12, color: '#D9534F', marginTop: 10, fontWeight: 'bold' }}>
+                        waktu 00:00:00 tidak dapat digunakan
+                      </Text>
+                    )}
                   </View>
                 </View>
               )}
@@ -182,56 +264,167 @@ export default function FromResepScreen() {
                 <View style={styles.stepBody}>
                   <View style={styles.iconCircle}><Ionicons name="cash" size={35} color="#9E5F3B" /></View>
                   <Text style={styles.qTitle}>Berapa budget kamu?</Text>
-                  <TextInput style={styles.input} placeholder="Budget Minimum" keyboardType="numeric" />
-                  <TextInput style={styles.input} placeholder="Budget Maximum" keyboardType="numeric" />
+                  <TextInput 
+                    style={styles.input} 
+                    placeholder="Budget Minimum. contoh:0" 
+                    keyboardType="numeric"
+                    value={budgetMin}
+                    onChangeText={setBudgetMin}
+                  />
+                  <TextInput 
+                    style={styles.input} 
+                    placeholder="Budget Maximum. Contoh:100000" 
+                    keyboardType="numeric"
+                    value={budgetMax}
+                    onChangeText={setBudgetMax}
+                  />
                 </View>
               )}
 
-              {/* 🌟 PERBAIKAN DINAMIS PADA STEP 3: INPUT BISA DITAMBAH */}
+              {/* 🌟 PERBAIKAN DINAMIS PADA STEP 3: DROPDOWN BAHAN */}
               {step === 3 && (
                 <View style={styles.stepBody}>
                   <View style={styles.iconCircle}><Ionicons name="cart" size={35} color="#9E5F3B" /></View>
                   <Text style={styles.qTitle}>Bahan apa yang tersedia?</Text>
                   
-                  {/* Box List dengan scroll area maksimal tinggi 180 agar tidak berantakan */}
-                  <View style={{ width: '100%', maxHeight: 180 }}>
-                    <ScrollView showsVerticalScrollIndicator={true} nestedScrollEnabled={true}>
-                      {bahan.map((val, i) => (
-                        <View key={i} style={{ flexDirection: 'row', alignItems: 'center', width: '100%', marginBottom: 10 }}>
-                          <TextInput 
-                            style={[styles.input, { flex: 1, marginBottom: 0 }]} 
-                            placeholder={`Bahan ke-${i+1}`} 
-                            value={val}
-                            onChangeText={(text) => handleBahanChange(text, i)}
-                          />
-                          {bahan.length > 1 && (
-                            <TouchableOpacity onPress={() => hapusBahan(i)} style={{ marginLeft: 10, padding: 5 }}>
-                              <Ionicons name="trash-outline" size={22} color="#D9534F" />
-                            </TouchableOpacity>
-                          )}
-                        </View>
-                      ))}
-                    </ScrollView>
-                  </View>
+                  {loadingIngredients ? (
+                    <ActivityIndicator size="large" color="#9E5F3B" />
+                  ) : (
+                    <>
+                      {/* Box List dengan scroll area maksimal tinggi 180 agar tidak berantakan */}
+                      <View style={{ width: '100%', maxHeight: 180 }}>
+                        <ScrollView showsVerticalScrollIndicator={true} nestedScrollEnabled={true}>
+                          {bahan.map((val, i) => (
+                            <View key={i} style={{ flexDirection: 'row', alignItems: 'center', width: '100%', marginBottom: 10, position: 'relative' }}>
+                              {/* Dropdown Trigger Button */}
+                              <TouchableOpacity 
+                                onPress={() => setDropdownVisibleIndex(dropdownVisibleIndex === i ? null : i)}
+                                style={[styles.input, { flex: 1, marginBottom: 0, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingRight: 12 }]}
+                              >
+                                <Text style={{ color: val ? '#9E5F3B' : '#AAA', flex: 1 }}>
+                                  {val || `Pilih Bahan ${i + 1}`}
+                                </Text>
+                                <Ionicons name="chevron-down" size={20} color="#9E5F3B" />
+                              </TouchableOpacity>
 
-                  {/* Tombol Tambah Elemen Bahan */}
-                  <TouchableOpacity 
-                    onPress={tambahBahan} 
-                    style={{ 
-                      flexDirection: 'row', 
-                      alignItems: 'center', 
-                      marginTop: 12, 
-                      backgroundColor: '#F9F2ED', 
-                      paddingVertical: 8, 
-                      paddingHorizontal: 15, 
-                      borderRadius: 20,
-                      borderWidth: 1,
-                      borderColor: '#9E5F3B'
-                    }}
-                  >
-                    <Ionicons name="add-circle-outline" size={20} color="#9E5F3B" style={{ marginRight: 6 }} />
-                    <Text style={{ color: '#9E5F3B', fontWeight: 'bold', fontSize: 13 }}>Tambah Bahan</Text>
-                  </TouchableOpacity>
+                              {/* Dropdown Modal */}
+                              {dropdownVisibleIndex === i && (
+                                <Modal
+                                  transparent={true}
+                                  visible={true}
+                                  onRequestClose={() => {
+                                    setDropdownVisibleIndex(null);
+                                    setSearchQuery('');
+                                  }}
+                                >
+                                  <TouchableOpacity 
+                                    style={{ flex: 1 }} 
+                                    onPress={() => {
+                                      setDropdownVisibleIndex(null);
+                                      setSearchQuery('');
+                                    }}
+                                  >
+                                    <View style={{
+                                      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                                      flex: 1,
+                                      justifyContent: 'center',
+                                      alignItems: 'center'
+                                    }}>
+                                      <View style={{
+                                        backgroundColor: 'white',
+                                        borderRadius: 12,
+                                        width: '80%',
+                                        maxHeight: 400,
+                                        borderWidth: 1,
+                                        borderColor: '#9E5F3B'
+                                      }}>
+                                        {/* Search Input */}
+                                        <TextInput
+                                          style={{
+                                            borderBottomWidth: 1,
+                                            borderBottomColor: '#E8D8CE',
+                                            paddingHorizontal: 16,
+                                            paddingVertical: 12,
+                                            fontSize: 14,
+                                            color: '#9E5F3B'
+                                          }}
+                                          placeholder="Cari bahan..."
+                                          placeholderTextColor="#AAA"
+                                          value={searchQuery}
+                                          onChangeText={setSearchQuery}
+                                        />
+                                        
+                                        {/* Filtered Ingredients List */}
+                                        <FlatList
+                                          data={ingredients.filter(item => {
+                                            const ingredientName = item.name || item.ingredient_name || '';
+                                            return ingredientName.toLowerCase().includes(searchQuery.toLowerCase());
+                                          })}
+                                          keyExtractor={(item) => String(item.id)}
+                                          renderItem={({ item }) => {
+                                            const ingredientName = item.name || item.ingredient_name || 'Unknown';
+                                            return (
+                                              <TouchableOpacity
+                                                onPress={() => {
+                                                  handleBahanChange(ingredientName, i);
+                                                  setDropdownVisibleIndex(null);
+                                                  setSearchQuery('');
+                                                }}
+                                                style={{
+                                                  paddingVertical: 12,
+                                                  paddingHorizontal: 16,
+                                                  borderBottomWidth: 1,
+                                                  borderBottomColor: '#E8D8CE'
+                                                }}
+                                              >
+                                                <Text style={{ color: '#9E5F3B', fontSize: 14 }}>
+                                                  {ingredientName}
+                                                </Text>
+                                              </TouchableOpacity>
+                                            );
+                                          }}
+                                          ListEmptyComponent={
+                                            <Text style={{ textAlign: 'center', color: '#999', paddingVertical: 20 }}>
+                                              Tidak ada bahan yang cocok
+                                            </Text>
+                                          }
+                                        />
+                                      </View>
+                                    </View>
+                                  </TouchableOpacity>
+                                </Modal>
+                              )}
+
+                              {bahan.length > 1 && (
+                                <TouchableOpacity onPress={() => hapusBahan(i)} style={{ marginLeft: 10, padding: 5 }}>
+                                  <Ionicons name="trash-outline" size={22} color="#D9534F" />
+                                </TouchableOpacity>
+                              )}
+                            </View>
+                          ))}
+                        </ScrollView>
+                      </View>
+
+                      {/* Tombol Tambah Elemen Bahan */}
+                      <TouchableOpacity 
+                        onPress={tambahBahan} 
+                        style={{ 
+                          flexDirection: 'row', 
+                          alignItems: 'center', 
+                          marginTop: 12, 
+                          backgroundColor: '#F9F2ED', 
+                          paddingVertical: 8, 
+                          paddingHorizontal: 15, 
+                          borderRadius: 20,
+                          borderWidth: 1,
+                          borderColor: '#9E5F3B'
+                        }}
+                      >
+                        <Ionicons name="add-circle-outline" size={20} color="#9E5F3B" style={{ marginRight: 6 }} />
+                        <Text style={{ color: '#9E5F3B', fontWeight: 'bold', fontSize: 13 }}>Tambah Bahan</Text>
+                      </TouchableOpacity>
+                    </>
+                  )}
                 </View>
               )}
 
@@ -240,8 +433,14 @@ export default function FromResepScreen() {
                 <TouchableOpacity style={styles.btnBack} onPress={() => step > 1 ? setStep(step - 1) : router.back()}>
                   <Text style={styles.textBack}>‹ Kembali</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.btnNext} onPress={nextStep}>
-                  <Text style={styles.textNext}>{step === 3 ? 'Selesai ✓' : 'Lanjut ›'}</Text>
+                <TouchableOpacity 
+                  style={[styles.btnNext, isNextDisabled() && styles.btnNextDisabled]} 
+                  onPress={nextStep}
+                  disabled={isNextDisabled()}
+                >
+                  <Text style={[styles.textNext, isNextDisabled() && styles.textNextDisabled]}>
+                    {step === 3 ? 'Selesai ✓' : 'Lanjut ›'}
+                  </Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -273,6 +472,8 @@ const styles = StyleSheet.create({
   btnRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 20 },
   btnBack: { padding: 12, borderRadius: 8, borderWidth: 1, borderColor: '#DDD', width: '45%', alignItems: 'center' },
   btnNext: { padding: 12, borderRadius: 8, backgroundColor: '#9E5F3B', width: '45%', alignItems: 'center' },
+  btnNextDisabled: { backgroundColor: '#CCCCCC', opacity: 0.6 },
   textBack: { color: '#9E5F3B' },
   textNext: { color: 'white', fontWeight: 'bold' },
+  textNextDisabled: { color: '#999999' },
 });
