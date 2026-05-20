@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, Text, View, Image, FlatList, TouchableOpacity, StatusBar, Platform, ImageBackground, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useRecipeView } from '@/hooks/useRecipeView';
 import { API_BASE_URL } from '@/constants/api';
 
@@ -16,15 +16,29 @@ interface ResepItem {
 
 export default function HasilRecResepScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams();
   const { saveRecipeView, saving } = useRecipeView();
   const [recipes, setRecipes] = useState<ResepItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Extract parameters from route
+  const time = params.time as string;
+  const budgetMin = params.budgetMin as string;
+  const budgetMax = params.budgetMax as string;
+  const ingredients = params.ingredients as string;
+
   useEffect(() => {
     const fetchRecipes = async () => {
       try {
-        const response = await fetch(`${API_BASE_URL}/recipes`);
+        // Build query string with filter parameters
+        const queryParams = new URLSearchParams();
+        if (time) queryParams.append('time', time);
+        if (budgetMin) queryParams.append('budgetMin', budgetMin);
+        if (budgetMax) queryParams.append('budgetMax', budgetMax);
+        if (ingredients) queryParams.append('ingredients', ingredients);
+
+        const response = await fetch(`${API_BASE_URL}/recipes?${queryParams.toString()}`);
 
         if (!response.ok) {
           throw new Error(`API error: ${response.status}`);
@@ -57,7 +71,7 @@ export default function HasilRecResepScreen() {
     };
 
     fetchRecipes();
-  }, []);
+  }, [time, budgetMin, budgetMax, ingredients]);
 
   const topRecipes = useMemo(() => recipes.slice(0, 3), [recipes]);
   const otherRecipes = useMemo(() => recipes.slice(3, 6), [recipes]);
@@ -83,31 +97,25 @@ export default function HasilRecResepScreen() {
       key={item.id} 
       style={styles.card}
       activeOpacity={0.85}
-      onPress={() => router.push({
-        pathname: '/detail_resep',
-        params: { id: item.id, name: item.title, imageUrl: item.image, price: item.price, time: item.time }
-      })}
+      onPress={() => handleRecipePress(item)}
+      disabled={saving}
     >
       <Image source={{ uri: item.image }} style={styles.cardImage} resizeMode="cover" />
       <View style={styles.cardInfo}>
         <Text style={styles.cardTitle}>{item.title}</Text>
         
         <View style={styles.cardRow}>
-          {/* Menggunakan simbol dollar pudar sesuai tampilan mockup asli kamu */}
-          <Text style={styles.cardPrice}>$ Rp. {item.price}</Text>
+          <Text style={styles.cardPrice}>Rp. {item.price}</Text>
           <View style={styles.timeRow}>
             <Ionicons name="time-outline" size={14} color="rgba(255, 255, 255, 0.8)" />
             <Text style={styles.cardTime}>{item.time}</Text>
           </View>
         </View>
-        <TouchableOpacity onPress={() => handleRecipePress(item)} disabled={saving}>
-          {saving ? (
-            <ActivityIndicator size="small" color="white" />
-          ) : (
-    
-        <Text style={styles.detailText}>Lihat Resep</Text>
-          )}
-        </TouchableOpacity>
+        {saving ? (
+          <ActivityIndicator size="small" color="white" style={{ marginTop: 6 }} />
+        ) : (
+          <Text style={styles.detailText}>Lihat Resep</Text>
+        )}
       </View>
     </TouchableOpacity>
   );
@@ -130,6 +138,17 @@ export default function HasilRecResepScreen() {
             <Text style={styles.headerSubtitle}>
               Berdasarkan waktu, budget & bahan kamu, kami rekomendasikan masak sendiri
             </Text>
+            {(time || budgetMin || budgetMax || ingredients) && (
+              <View style={{ marginTop: 15, backgroundColor: 'rgba(255,255,255,0.1)', paddingHorizontal: 12, paddingVertical: 10, borderRadius: 8 }}>
+                {time && (
+                  <Text style={{ color: 'white', fontSize: 12, marginBottom: 4 }}>
+                    Waktu: {Math.floor(Number(time) / 60)}h {Number(time) % 60}m
+                  </Text>
+                )}
+                {(budgetMin || budgetMax) && <Text style={{ color: 'white', fontSize: 12, marginBottom: 4 }}>Budget: Rp {budgetMin} - Rp {budgetMax}</Text>}
+                {ingredients && <Text style={{ color: 'white', fontSize: 12 }}>Bahan: {ingredients}</Text>}
+              </View>
+            )}
           </View>
           
           {/* DAFTAR KONTEN */}
