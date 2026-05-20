@@ -16,6 +16,7 @@ return new class extends Migration
             $table->integer('cookingTime');
             $table->string('difficulty');
             $table->string('imageUrl')->nullable();
+            $table->string('video')->nullable();
             $table->timestamps();
         });
     }

@@ -27,7 +27,10 @@ class IngredientController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'name' => 'required|string|max:255|unique:ingredients,name'
+            'name' => 'required|string|max:255|unique:ingredients,name',
+            'ingredient_picture' => 'nullable|string',
+            'ingredient_video' => 'nullable|string',
+            'price_per_kg' => 'nullable|integer',
         ]);
 
         $ingredient = Ingredient::create($validated);
@@ -75,7 +78,10 @@ class IngredientController extends Controller
         }
 
         $validated = $request->validate([
-            'name' => 'required|string|max:255|unique:ingredients,name,' . $id
+            'name' => 'required|string|max:255|unique:ingredients,name,' . $id,
+            'ingredient_picture' => 'nullable|string',
+            'ingredient_video' => 'nullable|string',
+            'price_per_kg' => 'nullable|integer',
         ]);
 
         $ingredient->update($validated);
