@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { StyleSheet, Text, View, Image, TouchableOpacity, ScrollView, StatusBar, ActivityIndicator, Platform } from 'react-native';
+import { VideoView, useVideoPlayer } from 'expo-video';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -32,6 +33,7 @@ type RecipeDetail = {
   title: string;
   subtitle?: string;
   image?: string;
+  video?: string;
   cookingTime?: number;
   difficulty?: string;
   totalIngredientPrice?: number;
@@ -62,6 +64,13 @@ export default function DetailResepScreen() {
   const [showIngredients, setShowIngredients] = useState(true);
   const [showTools, setShowTools] = useState(true);
   const [showSteps, setShowSteps] = useState(true);
+  const [isPlayingVideo, setIsPlayingVideo] = useState(false);
+  const [isVideoFullscreen, setIsVideoFullscreen] = useState(false);
+  const [videoUrl, setVideoUrl] = useState<string>('');
+  
+  const player = useVideoPlayer(videoUrl, (player) => {
+    player.loop = false;
+  });
 
   useEffect(() => {
     const fetchRecipeDetail = async () => {
@@ -97,6 +106,23 @@ export default function DetailResepScreen() {
 
     fetchRecipeDetail();
   }, [recipeId, saveRecipeView]);
+
+  const handlePlayVideo = () => {
+    if (!recipe?.video) {
+      alert('tidak ada video untuk resep ini terlebih dahulu');
+      return;
+    }
+    const fullUrl = `${API_BASE_URL.replace('/api', '')}/${encodeURI(recipe.video)}`;
+    console.log('Playing video URL:', fullUrl);
+    setVideoUrl(fullUrl);
+    setIsPlayingVideo(true);
+  };
+
+  const handleStopVideo = () => {
+    setIsPlayingVideo(false);
+    setIsVideoFullscreen(false);
+    player.pause();
+  };
 
   if (loading) {
     return (
@@ -148,12 +174,36 @@ export default function DetailResepScreen() {
       </SafeAreaView>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <View style={styles.imageContainer}>
-          <Image source={{ uri: imageUrl }} style={styles.mainImage} resizeMode="cover" />
-          <TouchableOpacity style={styles.playButton} activeOpacity={0.8}>
-            <Ionicons name="play" size={36} color="#9E5F3B" style={{ marginLeft: 4 }} />
-          </TouchableOpacity>
-        </View>
+        {isPlayingVideo ? (
+          <View style={[styles.imageContainer, isVideoFullscreen && styles.videoFullscreen]}>
+            <VideoView
+              style={styles.videoPlayer}
+              player={player}
+              allowsFullscreen
+              allowsPictureInPicture
+              onError={(error) => {
+                console.error('Video error:', error);
+                alert('Error playing video');
+              }}
+            />
+            <TouchableOpacity style={styles.closeVideoButton} onPress={handleStopVideo}>
+              <Ionicons name="close" size={28} color="white" />
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.fullscreenButton} 
+              onPress={() => setIsVideoFullscreen(!isVideoFullscreen)}
+            >
+              <Ionicons name={isVideoFullscreen ? 'contract' : 'expand'} size={24} color="white" />
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <View style={styles.imageContainer}>
+            <Image source={{ uri: imageUrl }} style={styles.mainImage} resizeMode="cover" />
+            <TouchableOpacity style={styles.playButton} activeOpacity={0.8} onPress={handlePlayVideo}>
+              <Ionicons name="play" size={36} color="#9E5F3B" style={{ marginLeft: 4 }} />
+            </TouchableOpacity>
+          </View>
+        )}
 
         <View style={styles.summaryCard}>
           <Text style={styles.recipeTitle}>{name}</Text>
@@ -275,6 +325,10 @@ const styles = StyleSheet.create({
   imageContainer: { width: '100%', height: 190, borderRadius: 15, overflow: 'hidden', position: 'relative', backgroundColor: '#EAEAEA' },
   mainImage: { width: '100%', height: '100%' },
   playButton: { position: 'absolute', top: '50%', left: '50%', transform: [{ translateX: -27.5 }, { translateY: -27.5 }], backgroundColor: 'rgba(255, 255, 255, 0.9)', width: 55, height: 55, borderRadius: 27.5, justifyContent: 'center', alignItems: 'center', elevation: 4 },
+  videoPlayer: { width: '100%', height: '100%' },
+  videoFullscreen: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, width: '100%', height: '100%', zIndex: 1000 },
+  closeVideoButton: { position: 'absolute', top: 10, right: 10, backgroundColor: 'rgba(0, 0, 0, 0.6)', width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center', zIndex: 10 },
+  fullscreenButton: { position: 'absolute', bottom: 50, right: 10, backgroundColor: 'rgba(0, 0, 0, 0.6)', width: 45, height: 45, borderRadius: 22.5, justifyContent: 'center', alignItems: 'center', zIndex: 10 },
   summaryCard: { backgroundColor: '#FFFFFF', borderRadius: 18, padding: 16, borderWidth: 1, borderColor: '#EFE3D5', marginTop: 15, marginBottom: 16, elevation: 1 },
   recipeTitle: { fontSize: 18, fontWeight: '700', color: '#333333', marginBottom: 8, fontFamily: Platform.OS === 'android' ? 'serif' : 'Georgia' },
   subtitleText: { fontSize: 13, color: '#6B6B6B', lineHeight: 18 },
