@@ -179,8 +179,7 @@ export default function DetailResepScreen() {
             <VideoView
               style={styles.videoPlayer}
               player={player}
-              allowsFullscreen
-              allowsPictureInPicture
+              nativeControls={true}
               onError={(error) => {
                 console.error('Video error:', error);
                 alert('Error playing video');
@@ -188,12 +187,6 @@ export default function DetailResepScreen() {
             />
             <TouchableOpacity style={styles.closeVideoButton} onPress={handleStopVideo}>
               <Ionicons name="close" size={28} color="white" />
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={styles.fullscreenButton} 
-              onPress={() => setIsVideoFullscreen(!isVideoFullscreen)}
-            >
-              <Ionicons name={isVideoFullscreen ? 'contract' : 'expand'} size={24} color="white" />
             </TouchableOpacity>
           </View>
         ) : (
@@ -326,6 +319,7 @@ const styles = StyleSheet.create({
   mainImage: { width: '100%', height: '100%' },
   playButton: { position: 'absolute', top: '50%', left: '50%', transform: [{ translateX: -27.5 }, { translateY: -27.5 }], backgroundColor: 'rgba(255, 255, 255, 0.9)', width: 55, height: 55, borderRadius: 27.5, justifyContent: 'center', alignItems: 'center', elevation: 4 },
   videoPlayer: { width: '100%', height: '100%' },
+  videoOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 100 },
   videoFullscreen: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, width: '100%', height: '100%', zIndex: 1000 },
   closeVideoButton: { position: 'absolute', top: 10, right: 10, backgroundColor: 'rgba(0, 0, 0, 0.6)', width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center', zIndex: 10 },
   fullscreenButton: { position: 'absolute', bottom: 50, right: 10, backgroundColor: 'rgba(0, 0, 0, 0.6)', width: 45, height: 45, borderRadius: 22.5, justifyContent: 'center', alignItems: 'center', zIndex: 10 },
