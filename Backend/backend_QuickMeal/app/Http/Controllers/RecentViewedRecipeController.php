@@ -2,32 +2,32 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\ApiResponses;
 use App\Models\RecentViewedRecipe;
 use Illuminate\Http\Request;
 
 class RecentViewedRecipeController extends Controller
 {
+    use ApiResponses;
+
     /**
      * Display a listing of the 5 most recent viewed recipes for authenticated user.
      */
-    public function index()
+    public function index(Request $request)
     {
-        $userId = auth()->id();
-        
-        if (!$userId) {
-            return response()->json(['message' => 'Unauthenticated'], 401);
+        $user = $request->user();
+
+        if (!$user) {
+            return $this->unauthorizedResponse();
         }
 
-        $recentRecipes = RecentViewedRecipe::where('user_id', $userId)
+        $recentRecipes = RecentViewedRecipe::where('user_id', $user->id)
             ->with('recipe')
-            ->orderBy('created_at', 'desc')
-            ->take(5)
+            ->latest('created_at')
+            ->limit(5)
             ->get();
 
-        return response()->json([
-            'message' => 'Recently viewed recipes retrieved successfully',
-            'data' => $recentRecipes
-        ]);
+        return $this->successResponse($recentRecipes, 'Recently viewed recipes retrieved successfully');
     }
 
     /**
@@ -36,45 +36,36 @@ class RecentViewedRecipeController extends Controller
      */
     public function store(Request $request)
     {
-        $request->validate([
+        $validated = $request->validate([
             'recipe_id' => 'required|exists:recipes,id',
         ]);
 
-        $userId = auth()->id();
+        $user = $request->user();
 
-        if (!$userId) {
-            return response()->json(['message' => 'Unauthenticated'], 401);
+        if (!$user) {
+            return $this->unauthorizedResponse();
         }
 
         // Delete any existing view of this recipe for this user (to avoid duplicates)
-        RecentViewedRecipe::where('user_id', $userId)
-            ->where('recipe_id', $request->recipe_id)
+        RecentViewedRecipe::where('user_id', $user->id)
+            ->where('recipe_id', $validated['recipe_id'])
             ->delete();
 
         // Create new recent viewed recipe record
         $recentView = RecentViewedRecipe::create([
-            'user_id' => $userId,
-            'recipe_id' => $request->recipe_id,
+            'user_id' => $user->id,
+            'recipe_id' => $validated['recipe_id'],
         ]);
 
-        // Get all views for this user ordered by oldest first
-        $userViews = RecentViewedRecipe::where('user_id', $userId)
-            ->orderBy('created_at', 'asc')
-            ->get();
+        // Keep only the newest 5 rows without loading the full history.
+        RecentViewedRecipe::where('user_id', $user->id)
+            ->whereNotIn('id', RecentViewedRecipe::where('user_id', $user->id)
+                ->latest('created_at')
+                ->limit(5)
+                ->pluck('id'))
+            ->delete();
 
-        // If more than 5, delete the oldest ones
-        if ($userViews->count() > 5) {
-            $toDelete = $userViews->count() - 5;
-            RecentViewedRecipe::where('user_id', $userId)
-                ->orderBy('created_at', 'asc')
-                ->take($toDelete)
-                ->delete();
-        }
-
-        return response()->json([
-            'message' => 'Recipe view recorded successfully',
-            'data' => $recentView->load('recipe')
-        ], 201);
+        return $this->successResponse($recentView->load('recipe'), 'Recipe view recorded successfully', 201);
     }
 
     /**
