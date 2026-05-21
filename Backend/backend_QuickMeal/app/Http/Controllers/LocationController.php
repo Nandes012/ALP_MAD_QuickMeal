@@ -12,7 +12,27 @@ class LocationController extends Controller
      */
     public function index()
     {
-        $locations = Location::with('ingredients')->get();
+        $page = request()->input('page');
+        $perPage = (int) request()->input('perPage', 20);
+
+        $query = Location::with('ingredients');
+
+        if ($page) {
+            $paginator = $query->paginate($perPage);
+            return response()->json([
+                'success' => true,
+                'data' => $paginator->items(),
+                'meta' => [
+                    'current_page' => $paginator->currentPage(),
+                    'last_page' => $paginator->lastPage(),
+                    'per_page' => $paginator->perPage(),
+                    'total' => $paginator->total(),
+                ]
+            ]);
+        }
+
+        $limit = (int) request()->input('limit', 100);
+        $locations = $query->limit($limit)->get();
 
         return response()->json([
             'success' => true,

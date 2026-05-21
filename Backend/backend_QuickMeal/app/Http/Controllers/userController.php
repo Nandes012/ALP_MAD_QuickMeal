@@ -188,22 +188,42 @@ class UserController extends Controller
             ], 200);
         }
 
-        // Get all users
-        $users = User::all();
-        
+        // Get all users (support pagination or limit)
+        $page = $request->query('page');
+        $perPage = (int) $request->query('perPage', 20);
+
+        if ($page) {
+            $paginator = User::paginate($perPage);
+            $usersCollection = collect($paginator->items());
+        } else {
+            $limit = (int) $request->query('limit', 100);
+            $usersCollection = User::limit($limit)->get();
+        }
+
         // Ensure all users have a default profile_picture if null
-        $users = $users->map(function($user) {
+        $usersCollection = $usersCollection->map(function($user) {
             if (!$user->profile_picture) {
                 $user->profile_picture = 'profile_pictures/1778642103_person.jpg';
             }
             return $user;
         });
 
-        return response()->json([
+        $response = [
             'success' => true,
-            'count' => $users->count(),
-            'data' => $users
-        ], 200);
+            'count' => $usersCollection->count(),
+            'data' => $usersCollection
+        ];
+
+        if (isset($paginator)) {
+            $response['meta'] = [
+                'current_page' => $paginator->currentPage(),
+                'last_page' => $paginator->lastPage(),
+                'per_page' => $paginator->perPage(),
+                'total' => $paginator->total(),
+            ];
+        }
+
+        return response()->json($response, 200);
     }
 
     /**

@@ -12,7 +12,26 @@ class IngredientController extends Controller
      */
     public function index()
     {
-        $ingredients = Ingredient::all();
+        $page = request()->input('page');
+        $perPage = (int) request()->input('perPage', 20);
+
+        if ($page) {
+            $paginator = Ingredient::paginate($perPage);
+            return response()->json([
+                'success' => true,
+                'message' => 'Ingredients fetched successfully',
+                'data' => $paginator->items(),
+                'meta' => [
+                    'current_page' => $paginator->currentPage(),
+                    'last_page' => $paginator->lastPage(),
+                    'per_page' => $paginator->perPage(),
+                    'total' => $paginator->total(),
+                ]
+            ]);
+        }
+
+        $limit = (int) request()->input('limit', 100);
+        $ingredients = Ingredient::limit($limit)->get();
 
         return response()->json([
             'success' => true,
@@ -126,6 +145,7 @@ class IngredientController extends Controller
             if (!$ingredient) {
                 return response()->json([
                     'success' => false,
+
                     'message' => 'Ingredient not found'
                 ], 404);
             }

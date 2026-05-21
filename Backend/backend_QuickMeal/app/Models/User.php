@@ -4,7 +4,6 @@ namespace App\Models;
 
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
@@ -61,22 +60,17 @@ class User extends Authenticatable
         );
     }
 
-    public function orders(): HasMany
-    {
-        return $this->hasMany(Order::class);
-    }
-
-    public function recommendations(): HasMany
+    public function recommendations(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany(Recommendation::class);
     }
 
-    public function subscriptions(): HasMany
+    public function subscriptions(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany(Subscription::class);
     }
 
-    public function recentViewedRecipes(): HasMany
+    public function recentViewedRecipes(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany(RecentViewedRecipe::class);
     }
