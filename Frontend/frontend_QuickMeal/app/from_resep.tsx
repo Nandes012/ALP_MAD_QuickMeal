@@ -115,7 +115,7 @@ export default function FromResepScreen() {
         time: totalMinutes.toString(),
         budgetMin: budgetMin,
         budgetMax: budgetMax,
-        ingredients: bahan.join(',')
+        ingredients: bahan.filter(b => b.trim()).join(',')
       };
       router.push({
         pathname: '/hasil_rec_resep',

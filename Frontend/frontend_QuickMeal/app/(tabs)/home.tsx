@@ -209,7 +209,7 @@ export default function HomeScreen() {
                 <TouchableOpacity 
                   key={item.id} 
                   style={styles.bannerCard} 
-                  activeOpacity={0.9} 
+                  activeOpacity={0.5} 
                   onPress={() => handleRecipePress(item)}
                   disabled={saving}
                 >
