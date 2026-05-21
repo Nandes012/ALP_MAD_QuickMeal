@@ -79,9 +79,8 @@ class RecipeController extends Controller
      * Get all recipes with optional filtering by time, budget, and ingredients
      * Ranking Priority:
      * 1. Most matching ingredients (descending)
-     * 2. Fewest total ingredients required (ascending)
-     * 3. Fastest cooking time (ascending)
-     * 4. Cheapest price (ascending)
+     * 2. Fastest cooking time (ascending)
+     * 3. Cheapest price (ascending)
      */
     public function index(): JsonResponse
     {
@@ -143,6 +142,7 @@ class RecipeController extends Controller
             // Add ingredient match count and total ingredient count to each recipe
             $rankedRecipes = $filteredRecipes->map(function ($recipe) use ($ingredientsParam) {
                 $matchCount = 0;
+                $matchedIngredients = [];
 
                 if ($ingredientsParam) {
                     $selectedIngredients = array_map('trim', explode(',', $ingredientsParam));
@@ -154,6 +154,7 @@ class RecipeController extends Controller
                     foreach ($selectedIngredients as $ingredient) {
                         if (in_array(strtolower($ingredient), $recipeIngredientNames)) {
                             $matchCount++;
+                            $matchedIngredients[] = $ingredient;
                         }
                     }
                 }
@@ -163,29 +164,61 @@ class RecipeController extends Controller
 
                 $recipe->match_count = $matchCount;
                 $recipe->total_ingredient_count = $totalIngredientCount;
+                
                 return $recipe;
             });
 
-            // Sort hierarchically:
+
+            // Sort hierarchically using stable sort (sort in reverse priority order):
             // 1. Most matching ingredients (descending)
-            // 2. Fewest total ingredients required (ascending)
-            // 3. Fastest cooking time (ascending)
-            // 4. Cheapest price (ascending)
-            $sortedRecipes = $rankedRecipes->sortBy([
-                [function ($recipe) { return -$recipe->match_count; }],  // Descending match count
-                [function ($recipe) { return $recipe->total_ingredient_count; }],  // Ascending total ingredients
-                [function ($recipe) { return $recipe->cookingTime ?? 0; }],  // Ascending cooking time
-                [function ($recipe) { return (float) ($recipe->ingredients->sum('price_estimate') ?? 0); }]  // Ascending price
-            ])->values();
+            // 2. Fastest cooking time (ascending)
+            // 3. Cheapest price (ascending)
+            $sortedRecipes = $rankedRecipes
+                ->sortBy(function ($recipe) { 
+                    return (float) ($recipe->ingredients->sum('price_estimate') ?? 0); 
+                })  // Sort by price first (lowest priority)
+                ->sortBy(function ($recipe) { 
+                    return $recipe->cookingTime ?? 0; 
+                })  // Then by cooking time
+                ->sortByDesc(function ($recipe) { 
+                    return $recipe->match_count; 
+                })  // Finally by match count descending (highest priority)
+                ->values();
 
             // Map the sorted recipes
             $mappedRecipes = $sortedRecipes->map(function ($recipe) {
                 return $this->mapRecipe($recipe);
             });
 
+            // Add debug info
+            $debugInfo = $sortedRecipes->map(function ($recipe) use ($ingredientsParam) {
+                $selectedIngredients = $ingredientsParam ? array_map('trim', explode(',', $ingredientsParam)) : [];
+                $recipeIngredientNames = $recipe->ingredients->pluck('ingredient.name')->toArray();
+                $matchedIngredients = [];
+                
+                foreach ($selectedIngredients as $searchIngredient) {
+                    foreach ($recipeIngredientNames as $recipeIngredient) {
+                        if (strtolower($searchIngredient) === strtolower($recipeIngredient)) {
+                            $matchedIngredients[] = $recipeIngredient;
+                        }
+                    }
+                }
+                
+                return [
+                    'name' => $recipe->name,
+                    'match_count' => $recipe->match_count,
+                    'searched_for' => $selectedIngredients,
+                    'recipe_has' => $recipeIngredientNames,
+                    'matched' => $matchedIngredients,
+                    'cooking_time' => $recipe->cookingTime,
+                    'price' => (float) ($recipe->ingredients->sum('price_estimate') ?? 0),
+                ];
+            })->toArray();
+
             return response()->json([
                 'success' => true,
                 'data' => $mappedRecipes,
+                'debug' => $debugInfo,
             ]);
         } catch (\Exception $e) {
             return response()->json([
