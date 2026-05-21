@@ -37,5 +37,11 @@ class DatabaseSeeder extends Seeder
         $this->call(LocationSeeder::class);
         // Seed ingredient-location mapping
         $this->call(IngredientLocationSeeder::class);
+        // Seed tags
+        $this->call(TagSeeder::class);
+        // Seed tag-recipe mapping
+        $this->call(TagRecipeSeeder::class);
+        // Seed tag-ingredient mapping
+        $this->call(TagIngredientSeeder::class);
     }
 }

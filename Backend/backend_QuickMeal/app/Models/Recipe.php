@@ -33,4 +33,9 @@ class Recipe extends Model
     {
         return $this->hasMany(RecentViewedRecipe::class);
     }
+
+    public function tags(): HasMany
+    {
+        return $this->hasMany(RecipeIngredient::class);
+    }
 }
