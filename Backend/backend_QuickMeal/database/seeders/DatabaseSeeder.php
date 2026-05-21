@@ -33,11 +33,9 @@ class DatabaseSeeder extends Seeder
         $this->call(RecipeStepSeeder::class);
         // Seed recipe tools
         $this->call(RecipeToolSeeder::class);
-        // Seed orders for testing
-        $this->call(OrderSeeder::class);
-                // Seed locations
+        // Seed locations
         $this->call(LocationSeeder::class);
-                // Seed ingredient-location mapping 
+        // Seed ingredient-location mapping
         $this->call(IngredientLocationSeeder::class);
     }
 }

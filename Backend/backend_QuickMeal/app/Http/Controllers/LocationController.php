@@ -2,22 +2,28 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\ApiResponses;
 use App\Models\Location;
 use Illuminate\Http\Request;
 
 class LocationController extends Controller
 {
+    use ApiResponses;
+
     /**
      * GET /api/locations
      */
-    public function index()
+    public function index(Request $request)
     {
-        $locations = Location::with('ingredients')->get();
+        $query = Location::with('ingredients');
+        [$locations, $paginator] = $this->paginateOrLimit($query, $request);
 
-        return response()->json([
-            'success' => true,
-            'data' => $locations
-        ]);
+        return $this->successResponse(
+            $locations,
+            null,
+            200,
+            $paginator ? ['meta' => $this->paginationMeta($paginator)] : []
+        );
     }
 
     /**
@@ -29,16 +35,10 @@ class LocationController extends Controller
             ->find($id);
 
         if (!$location) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Location not found'
-            ], 404);
+            return $this->notFoundResponse('Location');
         }
 
-        return response()->json([
-            'success' => true,
-            'data' => $location
-        ]);
+        return $this->successResponse($location);
     }
 
     /**
@@ -70,11 +70,7 @@ class LocationController extends Controller
             $location->ingredients()->attach($validated['ingredient_ids']);
         }
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Location created successfully',
-            'data' => $location->load('ingredients')
-        ], 201);
+        return $this->successResponse($location->load('ingredients'), 'Location created successfully', 201);
     }
 
     /**
@@ -85,10 +81,7 @@ class LocationController extends Controller
         $location = Location::find($id);
 
         if (!$location) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Location not found'
-            ], 404);
+            return $this->notFoundResponse('Location');
         }
 
         $validated = $request->validate([
@@ -108,11 +101,7 @@ class LocationController extends Controller
             $location->ingredients()->sync($validated['ingredient_ids']);
         }
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Location updated successfully',
-            'data' => $location->load('ingredients')
-        ]);
+        return $this->successResponse($location->load('ingredients'), 'Location updated successfully');
     }
 
     /**
@@ -123,17 +112,11 @@ class LocationController extends Controller
         $location = Location::find($id);
 
         if (!$location) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Location not found'
-            ], 404);
+            return $this->notFoundResponse('Location');
         }
 
         $location->delete();
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Location deleted successfully'
-        ]);
+        return $this->successResponse(null, 'Location deleted successfully');
     }
 }

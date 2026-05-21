@@ -2,23 +2,27 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\ApiResponses;
 use App\Models\Ingredient;
 use Illuminate\Http\Request;
 
 class IngredientController extends Controller
 {
+    use ApiResponses;
+
     /**
      * GET /api/ingredients
      */
-    public function index()
+    public function index(Request $request)
     {
-        $ingredients = Ingredient::all();
+        [$ingredients, $paginator] = $this->paginateOrLimit(Ingredient::query(), $request);
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Ingredients fetched successfully',
-            'data' => $ingredients
-        ]);
+        return $this->successResponse(
+            $ingredients,
+            'Ingredients fetched successfully',
+            200,
+            $paginator ? ['meta' => $this->paginationMeta($paginator)] : []
+        );
     }
 
     /**
@@ -50,17 +54,10 @@ class IngredientController extends Controller
         $ingredient = Ingredient::with('locations')->find($id);
 
         if (!$ingredient) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Ingredient not found'
-            ], 404);
+            return $this->notFoundResponse('Ingredient');
         }
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Ingredient fetched successfully',
-            'data' => $ingredient
-        ]);
+        return $this->successResponse($ingredient, 'Ingredient fetched successfully');
     }
 
     /**
@@ -71,10 +68,7 @@ class IngredientController extends Controller
         $ingredient = Ingredient::find($id);
 
         if (!$ingredient) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Ingredient not found'
-            ], 404);
+            return $this->notFoundResponse('Ingredient');
         }
 
         $validated = $request->validate([
@@ -86,11 +80,7 @@ class IngredientController extends Controller
 
         $ingredient->update($validated);
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Ingredient updated successfully',
-            'data' => $ingredient
-        ]);
+        return $this->successResponse($ingredient, 'Ingredient updated successfully');
     }
 
     /**
@@ -101,18 +91,12 @@ class IngredientController extends Controller
         $ingredient = Ingredient::find($id);
 
         if (!$ingredient) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Ingredient not found'
-            ], 404);
+            return $this->notFoundResponse('Ingredient');
         }
 
         $ingredient->delete();
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Ingredient deleted successfully'
-        ]);
+        return $this->successResponse(null, 'Ingredient deleted successfully');
     }
 
     /**
@@ -124,23 +108,13 @@ class IngredientController extends Controller
             $ingredient = Ingredient::with('locations')->find($id);
 
             if (!$ingredient) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Ingredient not found'
-                ], 404);
+                return $this->notFoundResponse('Ingredient');
             }
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Locations fetched successfully',
-                'data' => $ingredient->locations
-            ]);
+            return $this->successResponse($ingredient->locations, 'Locations fetched successfully');
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Error fetching locations',
-                'error' => $e->getMessage()
-            ], 500);
+            return $this->errorResponse('Error fetching locations', 500, ['error' => $e->getMessage()]);
         }
     }
 }
+

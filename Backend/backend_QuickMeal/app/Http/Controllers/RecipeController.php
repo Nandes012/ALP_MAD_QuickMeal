@@ -31,15 +31,10 @@ class RecipeController extends Controller
     public function getPopularRecipes(): JsonResponse
     {
         try {
-            // Get today's date to use as seed for consistent random selection
-            $today = date('Y-m-d');
-            
-            // Convert date to a numeric seed
-            $seed = crc32($today);
-            
-            // Get total count of recipes
+            // Use a database-level random selection and limit to avoid
+            // loading all recipes into memory.
             $totalRecipes = Recipe::count();
-            
+
             if ($totalRecipes === 0) {
                 return response()->json([
                     'success' => true,
@@ -47,18 +42,15 @@ class RecipeController extends Controller
                     'message' => 'No recipes available'
                 ]);
             }
-            
-            // Seed the random number generator for consistent results
-            srand($seed);
-            
-            // Get 12 random recipes (or fewer if not enough exist)
+
             $limit = min(12, $totalRecipes);
-            
+
+            // Use inRandomOrder() which delegates randomness to the DB and
+            // applies a LIMIT so only the needed rows are fetched.
             $recipes = Recipe::with('ingredients')
+                ->inRandomOrder()
+                ->limit($limit)
                 ->get()
-                ->shuffle()
-                ->take($limit)
-                ->values()
                 ->map(function ($recipe) {
                     return $this->mapRecipe($recipe);
                 });
@@ -91,19 +83,27 @@ class RecipeController extends Controller
             $budgetMax = request()->input('budgetMax', '');
             $ingredientsParam = request()->input('ingredients', '');
 
-            // Start building the query
+            // Start building the query and only fetch what's necessary. We
+            // support optional pagination via `page` and `perPage` query params.
             $query = Recipe::with('ingredients.ingredient');
 
-            // Filter by cooking time (time in minutes)
             if ($time) {
                 $query->where('cookingTime', '<=', (int)$time);
             }
 
-            // Execute query to get recipes
-            $recipes = $query->get();
+            $page = request()->input('page');
+            $perPage = (int) request()->input('perPage', 20);
+
+            if ($page) {
+                $paginator = $query->paginate($perPage);
+                $recipesCollection = collect($paginator->items());
+            } else {
+                $limit = (int) request()->input('limit', 100);
+                $recipesCollection = $query->limit($limit)->get();
+            }
 
             // Filter by budget and ingredients, and count matching ingredients
-            $filteredRecipes = $recipes->filter(function ($recipe) use ($budgetMin, $budgetMax, $ingredientsParam) {
+            $filteredRecipes = $recipesCollection->filter(function ($recipe) use ($budgetMin, $budgetMax, $ingredientsParam) {
                 // Calculate total ingredient price
                 $totalIngredientPrice = (float) ($recipe->ingredients->sum('price_estimate') ?? 0);
 
@@ -174,52 +174,37 @@ class RecipeController extends Controller
             // 2. Fastest cooking time (ascending)
             // 3. Cheapest price (ascending)
             $sortedRecipes = $rankedRecipes
-                ->sortBy(function ($recipe) { 
-                    return (float) ($recipe->ingredients->sum('price_estimate') ?? 0); 
+                ->sortBy(function ($recipe) {
+                    return (float) ($recipe->ingredients->sum('price_estimate') ?? 0);
                 })  // Sort by price first (lowest priority)
-                ->sortBy(function ($recipe) { 
-                    return $recipe->cookingTime ?? 0; 
+                ->sortBy(function ($recipe) {
+                    return $recipe->cookingTime ?? 0;
                 })  // Then by cooking time
-                ->sortByDesc(function ($recipe) { 
-                    return $recipe->match_count; 
+                ->sortByDesc(function ($recipe) {
+                    return $recipe->match_count;
                 })  // Finally by match count descending (highest priority)
                 ->values();
-
             // Map the sorted recipes
             $mappedRecipes = $sortedRecipes->map(function ($recipe) {
                 return $this->mapRecipe($recipe);
             });
 
-            // Add debug info
-            $debugInfo = $sortedRecipes->map(function ($recipe) use ($ingredientsParam) {
-                $selectedIngredients = $ingredientsParam ? array_map('trim', explode(',', $ingredientsParam)) : [];
-                $recipeIngredientNames = $recipe->ingredients->pluck('ingredient.name')->toArray();
-                $matchedIngredients = [];
-                
-                foreach ($selectedIngredients as $searchIngredient) {
-                    foreach ($recipeIngredientNames as $recipeIngredient) {
-                        if (strtolower($searchIngredient) === strtolower($recipeIngredient)) {
-                            $matchedIngredients[] = $recipeIngredient;
-                        }
-                    }
-                }
-                
-                return [
-                    'name' => $recipe->name,
-                    'match_count' => $recipe->match_count,
-                    'searched_for' => $selectedIngredients,
-                    'recipe_has' => $recipeIngredientNames,
-                    'matched' => $matchedIngredients,
-                    'cooking_time' => $recipe->cookingTime,
-                    'price' => (float) ($recipe->ingredients->sum('price_estimate') ?? 0),
-                ];
-            })->toArray();
-
-            return response()->json([
+            $response = [
                 'success' => true,
                 'data' => $mappedRecipes,
-                'debug' => $debugInfo,
-            ]);
+            ];
+
+            // Include pagination meta when applicable
+            if (isset($paginator)) {
+                $response['meta'] = [
+                    'current_page' => $paginator->currentPage(),
+                    'last_page' => $paginator->lastPage(),
+                    'per_page' => $paginator->perPage(),
+                    'total' => $paginator->total(),
+                ];
+            }
+
+            return response()->json($response);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
