@@ -15,21 +15,21 @@ class TagSeeder extends Seeder
         $tags = [
 
             // TAG RESEP
-            ['name' => 'Gorengan'],
-            ['name' => 'Cemilan'],
-            ['name' => 'Seafood'],
-            ['name' => 'Tumisan'],
-            ['name' => 'Kuah'],
-            ['name' => 'Bakaran'],
-            ['name' => 'Panggang'],
+            ['name' => 'Gorengan', 'type' => 'resep'],
+            ['name' => 'Cemilan', 'type' => 'resep'],
+            ['name' => 'Seafood', 'type' => 'resep'],
+            ['name' => 'Tumisan', 'type' => 'resep'],
+            ['name' => 'Kuah', 'type' => 'resep'],
+            ['name' => 'Bakaran', 'type' => 'resep'],
+            ['name' => 'Panggang', 'type' => 'resep'],
 
             // TAG BAHAN
-            ['name' => 'Sayuran'],
-            ['name' => 'Buah-buahan'],
-            ['name' => 'Dapur'],
-            ['name' => 'produk hewani'],
-            ['name' => 'Kacang-kacangan'],
-            ['name' => 'produk Susu'],
+            ['name' => 'Sayuran', 'type' => 'bahan'],
+            ['name' => 'Buah-buahan', 'type' => 'bahan'],
+            ['name' => 'Dapur', 'type' => 'bahan'],
+            ['name' => 'produk hewani', 'type' => 'bahan'],
+            ['name' => 'Kacang-kacangan', 'type' => 'bahan'],
+            ['name' => 'produk Susu', 'type' => 'bahan'],
         ];
 
         foreach ($tags as $tag) {
