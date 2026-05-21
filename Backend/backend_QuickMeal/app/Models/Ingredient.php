@@ -29,4 +29,9 @@ class Ingredient extends Model
             'id_location'
         )->withTimestamps();
     }
+
+    public function tags(): HasMany
+    {
+        return $this->hasMany(RecipeIngredient::class);
+    }
 }
