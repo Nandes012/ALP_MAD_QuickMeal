@@ -96,26 +96,31 @@ export default function HasilRecResepScreen() {
     <TouchableOpacity 
       key={item.id} 
       style={styles.card}
-      activeOpacity={0.85}
+      activeOpacity={0.9}
       onPress={() => handleRecipePress(item)}
       disabled={saving}
     >
       <Image source={{ uri: item.image }} style={styles.cardImage} resizeMode="cover" />
       <View style={styles.cardInfo}>
-        <Text style={styles.cardTitle}>{item.title}</Text>
+        <Text style={styles.cardTitle} numberOfLines={1}>{item.title}</Text>
         
-        <View style={styles.cardRow}>
-          <Text style={styles.cardPrice}>Rp. {item.price}</Text>
+        <Text style={styles.cardPrice}>Rp {item.price}</Text>
+
+        <View style={styles.cardFooterRow}>
           <View style={styles.timeRow}>
-            <Ionicons name="time-outline" size={14} color="rgba(255, 255, 255, 0.8)" />
+            <Ionicons name="time-outline" size={14} color="#9E5F3B" />
             <Text style={styles.cardTime}>{item.time}</Text>
           </View>
+
+          {saving ? (
+            <ActivityIndicator size="small" color="#9E5F3B" />
+          ) : (
+            <View style={styles.detailButton}>
+              <Text style={styles.detailText}>Lihat Resep</Text>
+              <Ionicons name="chevron-forward" size={12} color="white" />
+            </View>
+          )}
         </View>
-        {saving ? (
-          <ActivityIndicator size="small" color="white" style={{ marginTop: 6 }} />
-        ) : (
-          <Text style={styles.detailText}>Lihat Resep</Text>
-        )}
       </View>
     </TouchableOpacity>
   );
@@ -124,29 +129,41 @@ export default function HasilRecResepScreen() {
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#9E5F3B" />
       
-      {/* 1. BAGIAN BACKGROUND YANG BISA KAMU UBAH SENDIRI JALURNYA */}
       <ImageBackground 
-        source={require('../assets/images/cook.png')} // Silakan ganti nama file gambar latar belakang di sini
+        source={require('../assets/images/cook.png')} 
         style={styles.backgroundImage}
         resizeMode="cover"
       >
-        {/* Overlay transparan tipis krem agar teks/konten di atas gambar latar belakang tetap terbaca jelas */}
         <View style={styles.darkOverlay}>
           
-          {/* HEADER COKELAT SOLID */}
+          {/* HEADER DENGAN LENGKUNGAN ELEGAN */}
           <View style={styles.headerContainer}>
             <Text style={styles.headerSubtitle}>
               Berdasarkan waktu, budget & bahan kamu, kami rekomendasikan masak sendiri
             </Text>
+            
             {(time || budgetMin || budgetMax || ingredients) && (
-              <View style={{ marginTop: 15, backgroundColor: 'rgba(255,255,255,0.1)', paddingHorizontal: 12, paddingVertical: 10, borderRadius: 8 }}>
+              <View style={styles.filterBadgeContainer}>
                 {time && (
-                  <Text style={{ color: 'white', fontSize: 12, marginBottom: 4 }}>
-                    Waktu: {Math.floor(Number(time) / 60)}h {Number(time) % 60}m
-                  </Text>
+                  <View style={styles.filterBadgeLine}>
+                    <Ionicons name="hourglass-outline" size={13} color="rgba(255,255,255,0.9)" style={{ marginRight: 6 }} />
+                    <Text style={styles.filterBadgeText}>
+                      Waktu: {Math.floor(Number(time) / 60)}h {Number(time) % 60}m
+                    </Text>
+                  </View>
                 )}
-                {(budgetMin || budgetMax) && <Text style={{ color: 'white', fontSize: 12, marginBottom: 4 }}>Budget: Rp {budgetMin} - Rp {budgetMax}</Text>}
-                {ingredients && <Text style={{ color: 'white', fontSize: 12 }}>Bahan: {ingredients}</Text>}
+                {(budgetMin || budgetMax) && (
+                  <View style={styles.filterBadgeLine}>
+                    <Ionicons name="wallet-outline" size={13} color="rgba(255,255,255,0.9)" style={{ marginRight: 6 }} />
+                    <Text style={styles.filterBadgeText}>Budget: Rp {budgetMin} - Rp {budgetMax}</Text>
+                  </View>
+                )}
+                {ingredients && (
+                  <View style={styles.filterBadgeLine}>
+                    <Ionicons name="nutrition-outline" size={13} color="rgba(255,255,255,0.9)" style={{ marginRight: 6 }} />
+                    <Text style={styles.filterBadgeText} numberOfLines={1}>Bahan: {ingredients}</Text>
+                  </View>
+                )}
               </View>
             )}
           </View>
@@ -168,10 +185,10 @@ export default function HasilRecResepScreen() {
               renderItem={({ item }) => renderCard(item)}
               contentContainerStyle={styles.listContent}
               showsVerticalScrollIndicator={false}
-              ListHeaderComponent={<Text style={styles.sectionTitle}>Rekomendasi Terbaik</Text>}
+              ListHeaderComponent={<Text style={styles.sectionTitle}>✨ Rekomendasi Terbaik</Text>}
               ListFooterComponent={
-                <View style={{ marginTop: 10 }}>
-                  <Text style={styles.sectionTitle}>Pilihan Lainnya</Text>
+                <View style={{ marginTop: 15 }}>
+                  <Text style={styles.sectionTitle}>💡 Pilihan Lainnya</Text>
                   {otherRecipes.length > 0 ? (
                     otherRecipes.map((item) => renderCard(item))
                   ) : (
@@ -214,58 +231,138 @@ export default function HasilRecResepScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   backgroundImage: { flex: 1, width: '100%', height: '100%' },
-  darkOverlay: { flex: 1, backgroundColor: 'rgba(255, 248, 239, 0.4)' }, // Mengatur kepekatan background (ubah 0.4 jika ingin lebih transparan/gelap)
+  darkOverlay: { flex: 1, backgroundColor: 'rgba(255, 248, 239, 0.5)' }, 
   headerContainer: { 
     backgroundColor: '#9E5F3B', 
-    paddingTop: Platform.OS === 'ios' ? 60 : 40, 
+    paddingTop: Platform.OS === 'ios' ? 60 : 45, 
     paddingBottom: 25, 
-    paddingHorizontal: 30,
-    alignItems: 'center'
+    paddingHorizontal: 25,
+    alignItems: 'center',
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
   },
   headerSubtitle: { 
     color: 'white', 
-    fontSize: 14, 
+    fontSize: 15, 
     fontWeight: '600',
     textAlign: 'center', 
-    lineHeight: 20 
+    lineHeight: 22,
+    paddingHorizontal: 10,
+  },
+  filterBadgeContainer: { 
+    marginTop: 15, 
+    backgroundColor: 'rgba(255, 255, 255, 0.15)', 
+    paddingHorizontal: 15, 
+    paddingVertical: 12, 
+    borderRadius: 15,
+    width: '100%',
+    borderWidth: 0.5,
+    borderColor: 'rgba(255, 255, 255, 0.25)',
+  },
+  filterBadgeLine: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  filterBadgeText: { 
+    color: 'white', 
+    fontSize: 12,
+    fontWeight: '500',
   },
   listContent: { 
-    paddingHorizontal: 25, 
-    paddingTop: 20,
-    paddingBottom: 110 // Mencegah konten tertutup oleh bar navigasi bawah
+    paddingHorizontal: 20, 
+    paddingTop: 25,
+    paddingBottom: 120 
   },
   sectionTitle: { 
     fontSize: 16, 
-    fontWeight: 'bold', 
-    color: '#8D5B3E', 
+    fontWeight: '700', 
+    color: '#7A4325', 
     marginBottom: 15,
-    fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif'
+    marginTop: 5,
+    letterSpacing: 0.3,
   },
   card: { 
-    backgroundColor: '#9E5F3B', 
-    borderRadius: 15, 
+    backgroundColor: 'white', 
+    borderRadius: 18, 
     flexDirection: 'row', 
     padding: 12, 
-    marginBottom: 15, 
+    marginBottom: 16, 
     alignItems: 'center',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 1.5,
+    borderWidth: 1,
+    borderColor: '#F2E6DD',
+    elevation: 3,
+    shadowColor: '#9E5F3B',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
   },
-  cardImage: { width: 75, height: 75, borderRadius: 12, backgroundColor: '#EAEAEA' },
-  cardInfo: { flex: 1, marginLeft: 15 },
-  cardTitle: { color: 'white', fontSize: 14, fontWeight: 'bold' },
-  cardRow: { flexDirection: 'row', alignItems: 'center', marginTop: 5 },
-  cardPrice: { color: 'rgba(255, 255, 255, 0.9)', fontSize: 12, fontWeight: '500', marginRight: 20 },
-  timeRow: { flexDirection: 'row', alignItems: 'center' },
-  cardTime: { color: 'rgba(255, 255, 255, 0.9)', fontSize: 12, marginLeft: 4 },
-  detailText: { color: 'white', fontSize: 12, textDecorationLine: 'underline', marginTop: 6, fontWeight: '500' },
+  cardImage: { 
+    width: 85, 
+    height: 85, 
+    borderRadius: 14, 
+    backgroundColor: '#F9F2ED' 
+  },
+  cardInfo: { 
+    flex: 1, 
+    marginLeft: 15,
+    justifyContent: 'space-between',
+    height: 85,
+  },
+  cardTitle: { 
+    color: '#4A2E1B', 
+    fontSize: 15, 
+    fontWeight: '700',
+  },
+  cardPrice: { 
+    color: '#D87A4A', 
+    fontSize: 13, 
+    fontWeight: '700',
+    marginTop: 2,
+  },
+  cardFooterRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  timeRow: { 
+    flexDirection: 'row', 
+    alignItems: 'center',
+    backgroundColor: '#F9F2ED',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  cardTime: { 
+    color: '#9E5F3B', 
+    fontSize: 11, 
+    marginLeft: 5,
+    fontWeight: '600',
+  },
+  detailButton: {
+    backgroundColor: '#9E5F3B',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+  },
+  detailText: { 
+    color: 'white', 
+    fontSize: 11, 
+    fontWeight: '700',
+    marginRight: 2,
+  },
   loadingWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 30 },
   loadingText: { color: '#8D5B3E', marginTop: 12, fontSize: 14, fontWeight: '600' },
   errorText: { color: '#B00020', fontSize: 14, textAlign: 'center', fontWeight: '600' },
-  emptyText: { color: '#8D5B3E', fontSize: 13, textAlign: 'center', marginTop: 12 },
+  emptyText: { color: '#8D5B3E', fontSize: 13, textAlign: 'center', marginTop: 12, fontStyle: 'italic' },
   
   // --- BOTTOM FIXED NAVBAR STYLES ---
   navbarContainer: {
@@ -305,7 +402,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 4,
-    borderColor: '#FFF8EF', // Border luar tombol mengikuti warna dasar krem proyekmu
+    borderColor: '#FFF8EF', 
     marginTop: -35, 
     elevation: 4,
     shadowColor: '#000',

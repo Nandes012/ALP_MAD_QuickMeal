@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, Text, View, Image, TouchableOpacity, FlatList, StatusBar, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useFocusEffect, useRouter } from 'expo-router';
+import { useFocusEffect, useRouter, useLocalSearchParams } from 'expo-router'; 
 import { useFonts, Langar_400Regular } from '@expo-google-fonts/langar';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL, getApiHost } from '@/constants/api';
@@ -53,6 +53,7 @@ async function fetchList(activeTab: 'Masak' | 'Bahan') {
 
 export default function ListScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams(); 
   const [activeTab, setActiveTab] = useState<'Masak' | 'Bahan'>('Masak');
   const [data, setData] = useState<FoodItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -65,6 +66,16 @@ export default function ListScreen() {
     'Inter-SemiBold': Langar_400Regular,
     'Inter-Bold': Langar_400Regular,
   });
+
+  // 🛠️ PENGATURAN & SINKRONISASI TAB DARI PAGE DETAIL
+  useEffect(() => {
+    const targetTab = params.activeTab;
+    if (targetTab === 'Bahan' || targetTab === 'Masak') {
+      if (activeTab !== targetTab) {
+        setActiveTab(targetTab as 'Masak' | 'Bahan');
+      }
+    }
+  }, [params.activeTab]); // Dioptimalkan untuk membaca perubahan parameter navigasi secara responsif
 
   const fetchProfilePicture = useCallback(async () => {
     try {
@@ -171,18 +182,18 @@ export default function ListScreen() {
       activeOpacity={0.9}
       onPress={() => handleItemPress(item)}
     >
+      <Image source={{ uri: item.imageUri }} style={styles.foodImage} resizeMode="cover" />
+
       <View style={styles.cardInfo}>
         <Text style={styles.foodName} numberOfLines={1}>{item.name}</Text>
-        <Text style={styles.foodPrice}>Rp. {item.price}</Text>
-        
-        <View style={styles.actionButton}>
-          <Text style={styles.actionButtonText}>
-            {activeTab === 'Masak' ? 'Resep' : 'Detail Bahan'}
-          </Text>
-        </View>
+        <Text style={styles.foodPrice}>Rp {item.price}</Text>
       </View>
 
-      <Image source={{ uri: item.imageUri }} style={styles.foodImage} resizeMode="cover" />
+      <View style={styles.actionButton}>
+        <Text style={styles.actionButtonText}>
+          {activeTab === 'Masak' ? 'Lihat Resep ›' : 'Lihat Bahan ›'}
+        </Text>
+      </View>
     </TouchableOpacity>
   );
 
@@ -200,7 +211,6 @@ export default function ListScreen() {
         </TouchableOpacity>
       </SafeAreaView>
 
-      {/* --- TAB SWITCHER OVAL --- */}
       <View style={styles.tabOuterContainer}>
         <View style={styles.tabContainer}>
           <TouchableOpacity 
@@ -219,9 +229,8 @@ export default function ListScreen() {
         </View>
       </View>
 
-      {/* Judul Section Dinamis */}
       <Text style={styles.sectionTitle}>
-        {activeTab === 'Masak' ? 'Resep Makanan' : 'Info Bahan'}
+        {activeTab === 'Masak' ? 'Rekomendasi Terbaik' : 'Pilihan Komponen'}
       </Text>
 
       <FlatList
@@ -251,37 +260,43 @@ const styles = StyleSheet.create({
   activeTabBg: { backgroundColor: '#9E5F3B' },
   tabText: { fontSize: 16, color: '#1A1A1A', fontFamily: 'Inter-Medium' },
   activeTabText: { color: '#FFFFFF', fontFamily: 'Inter-Bold' },
-  sectionTitle: { textAlign: 'center', fontSize: 22, color: '#9E5F3B', marginTop: 20, marginBottom: 15, fontFamily: 'Inter-SemiBold' },
+  sectionTitle: { textAlign: 'left', paddingHorizontal: 25, fontSize: 18, color: '#9E5F3B', marginTop: 25, marginBottom: 15, fontFamily: 'Inter-Bold' },
   listContent: { paddingHorizontal: 25, paddingBottom: 110 },
   card: { 
-    backgroundColor: '#9E5F3B', 
-    borderRadius: 24, 
+    backgroundColor: '#FFFFFF', 
+    borderRadius: 20, 
     flexDirection: 'row', 
-    padding: 16, 
+    padding: 14, 
     marginBottom: 15, 
-    alignItems: 'center', 
-    justifyContent: 'space-between',
-    elevation: 3 
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#F2E6DF',
+    elevation: 2,
+    shadowColor: '#9E5F3B',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4
   },
-  cardInfo: { flex: 1, marginRight: 15, justifyContent: 'center' },
-  foodName: { color: 'white', fontSize: 18, fontFamily: 'Inter-SemiBold', marginBottom: 4 },
-  foodPrice: { color: 'rgba(255, 255, 255, 0.9)', fontSize: 14, fontFamily: 'Inter-Regular', marginBottom: 12 },
+  foodImage: { 
+    width: 80, 
+    height: 80, 
+    borderRadius: 16,
+    backgroundColor: '#F9F2ED',
+    marginRight: 14
+  },
+  cardInfo: { flex: 1, justifyContent: 'center' },
+  foodName: { color: '#4A2A18', fontSize: 16, fontFamily: 'Inter-Bold', marginBottom: 4 },
+  foodPrice: { color: '#9E5F3B', fontSize: 14, fontFamily: 'Inter-SemiBold' },
   actionButton: {
-    backgroundColor: 'rgba(255, 255, 255, 0.3)', 
-    paddingVertical: 6,
-    paddingHorizontal: 16,
-    borderRadius: 15,
-    alignSelf: 'flex-start',
+    backgroundColor: '#9E5F3B', 
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 16,
+    marginLeft: 10
   },
   actionButtonText: {
     color: '#FFFFFF',
     fontSize: 12,
-    fontFamily: 'Inter-Medium',
-  },
-  foodImage: { 
-    width: 95, 
-    height: 95, 
-    borderRadius: 20,
-    backgroundColor: '#FFFFFF'
+    fontFamily: 'Inter-Bold',
   },
 });
