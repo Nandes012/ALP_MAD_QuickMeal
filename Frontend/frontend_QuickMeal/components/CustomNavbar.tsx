@@ -1,29 +1,35 @@
 import React from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useRouter, usePathname } from 'expo-router';
 
 export default function CustomNavbar() {
   const router = useRouter();
+  const pathname = usePathname();
+
+  const isActive = (route: string) => {
+    if (!pathname) return false;
+    return pathname === route || pathname.startsWith(route + '/') || pathname.startsWith(route + '?') || pathname.startsWith(route);
+  };
 
   return (
     <View style={styles.navbar}>
       <TouchableOpacity style={styles.navItem} onPress={() => router.push('/home')}>
-        <Ionicons name="home-outline" size={24} color="#D2B48C" />
-        <Text style={[styles.navText, {color: '#D2B48C'}]}>Home</Text>
+        <Ionicons name={isActive('/home') ? 'home' : 'home-outline'} size={24} color={isActive('/home') ? '#FFF' : '#D2B48C'} />
+        <Text style={[styles.navText, isActive('/home') ? styles.activeText : {color: '#D2B48C'}]}>Home</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.navItemCenter} onPress={() => router.push('/food_rec')}>
-        <View style={styles.centerIconBg}>
+      <TouchableOpacity style={styles.navItemCenter} onPress={() => router.push('/from_resep')}>
+        <View style={[styles.centerIconBg, isActive('/from_resep') && styles.centerActiveBg]}>
           <Ionicons name="search" size={28} color="white" />
         </View>
-        <Text style={styles.navTextCenter}>Get Food Rec</Text>
+        <Text style={[styles.navTextCenter, isActive('/from_resep') && styles.activeText]}>Resep</Text>
       </TouchableOpacity>
 
       {/* HANYA MENGUBAH /explore MENJADI /list DI BAWAH INI */}
       <TouchableOpacity style={styles.navItem} onPress={() => router.push('/list')}>
-        <Ionicons name="file-tray-full-outline" size={24} color="#D2B48C" />
-        <Text style={[styles.navText, {color: '#D2B48C'}]}>List</Text>
+        <Ionicons name={isActive('/list') ? 'file-tray-full' : 'file-tray-full-outline'} size={24} color={isActive('/list') ? '#FFF' : '#D2B48C'} />
+        <Text style={[styles.navText, isActive('/list') ? styles.activeText : {color: '#D2B48C'}]}>List</Text>
       </TouchableOpacity>
     </View>
   );
@@ -75,5 +81,13 @@ const styles = StyleSheet.create({
     color: '#D2B48C',
     marginTop: 4,
     fontWeight: 'bold',
+  }
+  ,
+  activeText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+  },
+  centerActiveBg: {
+    backgroundColor: '#C08A5A',
   }
 });

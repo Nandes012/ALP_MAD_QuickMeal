@@ -33,14 +33,26 @@ export default function HomeScreen() {
     'Inter-Bold': Langar_400Regular
   });
 
+  // Ucapan sesuai waktu otomatis (Menjaga Home tetap interaktif)
+  const getTimeGreeting = () => {
+    const hours = new Date().getHours();
+    if (hours < 11) return { title: 'Selamat Pagi ☀️', sub: 'Sarapan apa kita hari ini?' };
+    if (hours < 15) return { title: 'Selamat Siang 🌤️', sub: 'Yuk masakin menu siang yang praktis!' };
+    if (hours < 18) return { title: 'Selamat Sore 🍃', sub: 'Waktunya bikin camilan sore kesukaanmu.' };
+    return { title: 'Selamat Malam 🌙', sub: 'Makan malam hangat bersama keluarga?' };
+  };
+
+  const greeting = getTimeGreeting();
+
+  // ==========================================
+  // LOGIKA DATA & FETCHING (ASLI TIDAK BERUBAH)
+  // ==========================================
   const fetchRecommendedRecipes = useCallback(async () => {
     try {
       setRecommendationsLoading(true);
       const response = await fetch(`${API_BASE_URL}/recipes`);
 
-      if (!response.ok) {
-        throw new Error(`API error: ${response.status}`);
-      }
+      if (!response.ok) throw new Error(`API error: ${response.status}`);
 
       const result = await response.json();
       if (result?.success && Array.isArray(result.data)) {
@@ -50,7 +62,6 @@ export default function HomeScreen() {
           desc: item.subtitle || item.description || 'Rekomendasi untuk kamu hari ini',
           image: item.image || item.imageUrl || 'https://via.placeholder.com/500',
         }));
-
         setRecommendedRecipes(mappedRecipes.slice(0, 4));
       } else {
         setRecommendedRecipes([]);
@@ -66,10 +77,7 @@ export default function HomeScreen() {
   const fetchProfilePicture = useCallback(async () => {
     try {
       const token = await AsyncStorage.getItem('auth_token');
-
-      if (!token) {
-        return;
-      }
+      if (!token) return;
 
       const response = await fetch(`${API_BASE_URL}/auth/me`, {
         method: 'GET',
@@ -80,9 +88,7 @@ export default function HomeScreen() {
         },
       });
 
-      if (!response.ok) {
-        throw new Error(`API error: ${response.status}`);
-      }
+      if (!response.ok) throw new Error(`API error: ${response.status}`);
 
       const result = await response.json();
       if (result?.success && result?.data?.profile_picture) {
@@ -97,9 +103,7 @@ export default function HomeScreen() {
   const fetchRecentRecipes = useCallback(async () => {
     try {
       setRecentLoading(true);
-
       const token = await AsyncStorage.getItem('auth_token');
-
       if (!token) {
         setRecentRecipes([]);
         setRecentLoading(false);
@@ -115,9 +119,7 @@ export default function HomeScreen() {
         },
       });
 
-      if (!response.ok) {
-        throw new Error(`API error: ${response.status}`);
-      }
+      if (!response.ok) throw new Error(`API error: ${response.status}`);
 
       const result = await response.json();
       if (Array.isArray(result?.data)) {
@@ -156,11 +158,8 @@ export default function HomeScreen() {
 
   const handleRecipePress = async (item: RecipeItem) => {
     const cleanName = item.name.replace(/\s+/g, ' ').trim();
-
     const success = await saveRecipeView(item.id);
-    if (!success) {
-      return;
-    }
+    if (!success) return;
 
     router.push({
       pathname: '/detail_resep',
@@ -171,28 +170,31 @@ export default function HomeScreen() {
   return (
     <View style={styles.container}>
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 140 }}>
           
           {/* HEADER */}
           <View style={styles.headerHalo}>
             <View style={styles.headerTextCol}>
                <View style={styles.haloRow}>
-                    <Image source={{ uri: 'https://cdn-icons-png.flaticon.com/512/1000/1000390.png' }} style={styles.chefHat} />
-                  <Text style={styles.haloTitle}>Halo,</Text>
+                  <Image source={{ uri: 'https://cdn-icons-png.flaticon.com/512/1000/1000390.png' }} style={styles.chefHat} />
+                  <Text style={styles.haloTitle}>{greeting.title}</Text>
                </View>
-               <Text style={styles.haloSubTitle}>Mau masak apa hari ini?</Text>
+               <Text style={styles.haloSubTitle}>{greeting.sub}</Text>
             </View>
-            <TouchableOpacity onPress={() => router.push("/profile")}>
+            <TouchableOpacity activeOpacity={0.8} onPress={() => router.push("/profile")}>
               <View style={styles.profileContainer}>
-                  <Image source={{ uri: profilePicture }} style={styles.profilePic} />
-                <View style={styles.editBadge}><Ionicons name="pencil" size={8} color="white" /></View>
+                <Image source={{ uri: profilePicture }} style={styles.profilePic} />
+                <View style={styles.editBadge}>
+                  <Ionicons name="pencil" size={9} color="white" />
+                </View>
               </View>
             </TouchableOpacity>
           </View>
 
-          {/* SECTION: REKOMENDASI (HORIZONTAL) */}
+          {/* SECTION REKOMENDASI SPESIAL */}
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Rekomendasi buat kamu hari ini</Text>
+            <Text style={styles.sectionTitle}>✨ Rekomendasi Spesial</Text>
+            <Text style={styles.sectionSubtitle}>Dibuat khusus untuk menggugah seleramu</Text>
           </View>
           
           {recommendationsLoading ? (
@@ -204,23 +206,31 @@ export default function HomeScreen() {
               horizontal 
               showsHorizontalScrollIndicator={false} 
               contentContainerStyle={styles.horizontalScroll}
+              snapToInterval={width * 0.82 + 16}
+              decelerationRate="fast"
             >
               {recommendedRecipes.map((item) => (
                 <TouchableOpacity 
                   key={item.id} 
                   style={styles.bannerCard} 
-                  activeOpacity={0.5} 
+                  activeOpacity={0.9} 
                   onPress={() => handleRecipePress(item)}
                   disabled={saving}
                 >
+                  <Image source={{ uri: item.image }} style={styles.bannerImage} />
                   <View style={styles.bannerTextContent}>
+                    <View style={styles.trendingBadge}>
+                      <Ionicons name="star" size={10} color="#FFB03A" />
+                      <Text style={styles.trendingText}>Pilihan Utama</Text>
+                    </View>
                     <Text style={styles.bannerFoodName} numberOfLines={1}>{item.name}</Text>
                     <Text style={styles.bannerFoodDesc} numberOfLines={2}>{item.desc}</Text>
+                    
                     <View style={styles.btnLihatResepSmall}>
                       <Text style={styles.btnResepText}>Lihat Resep</Text>
+                      <Ionicons name="arrow-forward-circle" size={14} color="#FFFFFF" style={{marginLeft: 4}} />
                     </View>
                   </View>
-                  <Image source={{ uri: item.image }} style={styles.bannerImage} />
                 </TouchableOpacity>
               ))}
             </ScrollView>
@@ -228,9 +238,10 @@ export default function HomeScreen() {
             <Text style={styles.emptyState}>Belum ada rekomendasi untuk ditampilkan.</Text>
           )}
 
-          {/* SECTION: RESEP DILIHAT (GRID VERTICAL) */}
+          {/* SECTION TERAKHIR DILIHAT */}
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Resep Yang Sudah di Lihat</Text>
+            <Text style={styles.sectionTitle}>🕒 Terakhir Dilihat</Text>
+            <Text style={styles.sectionSubtitle}>Jangan sampai lupa resep yang kamu incar kemarin</Text>
           </View>
 
           {recentLoading ? (
@@ -243,6 +254,7 @@ export default function HomeScreen() {
                 <TouchableOpacity 
                   key={item.id} 
                   style={styles.gridCard} 
+                  activeOpacity={0.9}
                   onPress={() => handleRecipePress(item)}
                   disabled={saving}
                 >
@@ -250,14 +262,18 @@ export default function HomeScreen() {
                   <View style={styles.gridOverlay}>
                     <Text style={styles.gridFoodName} numberOfLines={2}>{item.name}</Text>
                     <View style={styles.btnLihatResepGrid}>
-                       <Text style={styles.btnResepTextSmall}>Lihat Resep</Text>
+                       <Text style={styles.btnResepTextSmall}>Detail</Text>
+                       <Ionicons name="chevron-forward" size={11} color="#FFFFFF" />
                     </View>
                   </View>
                 </TouchableOpacity>
               ))}
             </View>
           ) : (
-            <Text style={styles.emptyState}>Belum ada resep yang dilihat.</Text>
+            <View style={styles.cleanEmptyContainer}>
+              <Ionicons name="time-outline" size={26} color="#C4A493" />
+              <Text style={styles.emptyState}>Belum ada resep yang dilihat belakangan ini.</Text>
+            </View>
           )}
 
         </ScrollView>
@@ -269,57 +285,138 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FFF8EF' },
-  headerHalo: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: 10 },
+  container: { flex: 1, backgroundColor: '#FCF8F5' },
+  
+  headerHalo: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'center', 
+    paddingHorizontal: 24, 
+    paddingTop: 16,
+    marginBottom: 10
+  },
   headerTextCol: { flex: 1 },
   haloRow: { flexDirection: 'row', alignItems: 'center' },
-  chefHat: { width: 35, height: 35, marginRight: 8 },
-  haloTitle: { fontSize: 28, fontFamily: 'Inter-Bold', color: '#9E5F3B' },
-  haloSubTitle: { fontSize: 18, color: '#9E5F3B', marginTop: 5, fontFamily: 'Inter-Medium', opacity: 0.6 },
-  profileContainer: { position: 'relative' },
-  profilePic: { width: 50, height: 50, borderRadius: 25, borderWidth: 1, borderColor: '#9E5F3B' },
-  editBadge: { position: 'absolute', right: 0, bottom: 0, backgroundColor: '#5b2f20', borderRadius: 10, padding: 3 },
-  sectionHeader: { paddingHorizontal: 20, marginTop: 25, marginBottom: 15 },
-  sectionTitle: { fontSize: 18, color: '#9E5F3B', fontFamily: 'Inter-Bold' },
-  horizontalScroll: { paddingLeft: 20, paddingRight: 5 },
-  bannerCard: { 
+  chefHat: { width: 26, height: 26, marginRight: 6, resizeMode: 'contain' },
+  haloTitle: { fontSize: 24, fontFamily: 'Inter-Bold', color: '#3A2214', letterSpacing: -0.4 },
+  haloSubTitle: { fontSize: 14, color: '#705243', marginTop: 3, fontFamily: 'Inter-Medium', opacity: 0.85 },
+  
+  profileContainer: { position: 'relative', padding: 2 },
+  profilePic: { width: 52, height: 52, borderRadius: 26, borderWidth: 2, borderColor: '#FFFFFF', backgroundColor: '#EFEFEF' },
+  editBadge: { 
+    position: 'absolute', 
+    right: 0, 
+    bottom: 2, 
     backgroundColor: '#9E5F3B', 
-    marginRight: 15, 
-    borderRadius: 25, 
+    borderRadius: 10, 
+    width: 18, 
+    height: 18, 
+    justifyContent: 'center', 
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: '#FCF8F5'
+  },
+  
+  sectionHeader: { paddingHorizontal: 24, marginTop: 22, marginBottom: 12 },
+  sectionTitle: { fontSize: 18, color: '#3A2214', fontFamily: 'Inter-Bold', letterSpacing: -0.3 },
+  sectionSubtitle: { fontSize: 12, color: '#9C8070', fontFamily: 'Inter-Regular', marginTop: 1 },
+  
+  horizontalScroll: { paddingLeft: 24, paddingRight: 8 },
+  
+  bannerCard: { 
+    backgroundColor: '#FFFFFF', 
+    marginRight: 16, 
+    borderRadius: 24, 
     flexDirection: 'row', 
-    padding: 15, 
+    padding: 14, 
     alignItems: 'center', 
     width: width * 0.82, 
-    height: 150 
+    height: 140,
+    borderWidth: 1,
+    borderColor: '#F5EAE4',
+    ...Platform.select({
+      ios: { shadowColor: '#5C3826', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.08, shadowRadius: 8 },
+      android: { elevation: 4 }
+    })
   },
-  bannerTextContent: { flex: 1, paddingRight: 10 },
-  bannerFoodName: { color: 'white', fontSize: 20, fontFamily: 'Inter-Bold' },
-  bannerFoodDesc: { color: 'white', fontSize: 12, marginVertical: 6, opacity: 0.9, fontFamily: 'Inter-Regular' },
-  bannerImage: { width: 100, height: 100, borderRadius: 18, resizeMode: 'cover' },
-  btnLihatResepSmall: { backgroundColor: 'rgba(255,255,255,0.25)', paddingVertical: 6, paddingHorizontal: 12, borderRadius: 15, alignSelf: 'flex-start' },
-  btnResepText: { color: 'white', fontSize: 11, fontFamily: 'Inter-Bold' },
-  loadingBlock: { minHeight: 180, alignItems: 'center', justifyContent: 'center' },
-  emptyState: { color: '#9E5F3B', textAlign: 'center', marginHorizontal: 20, marginTop: 10, fontFamily: 'Inter-Medium' },
-  gridContainer: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 15, justifyContent: 'space-between' },
+  bannerImage: { width: 112, height: 112, borderRadius: 18, resizeMode: 'cover' },
+  bannerTextContent: { flex: 1, paddingLeft: 14, justifyContent: 'space-between', height: '100%' },
+  
+  trendingBadge: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    backgroundColor: '#FFF6E9', 
+    paddingHorizontal: 8, 
+    paddingVertical: 3, 
+    borderRadius: 6, 
+    alignSelf: 'flex-start' 
+  },
+  trendingText: { color: '#D47E13', fontSize: 9, fontFamily: 'Inter-Bold', marginLeft: 3 },
+  
+  bannerFoodName: { color: '#3A2214', fontSize: 16, fontFamily: 'Inter-Bold', marginTop: 4 },
+  bannerFoodDesc: { color: '#8A6E5F', fontSize: 11, fontFamily: 'Inter-Regular', marginVertical: 2, lineHeight: 14 },
+  
+  // Tombol Coklat Solid Rekomendasi
+  btnLihatResepSmall: { 
+    backgroundColor: '#9E5F3B', 
+    paddingVertical: 5, 
+    paddingHorizontal: 12, 
+    borderRadius: 12, 
+    alignSelf: 'flex-start', 
+    flexDirection: 'row', 
+    alignItems: 'center',
+    marginTop: 4 
+  },
+  btnResepText: { color: '#FFFFFF', fontSize: 11, fontFamily: 'Inter-Bold' },
+  
+  loadingBlock: { minHeight: 140, alignItems: 'center', justifyContent: 'center' },
+  cleanEmptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 32,
+    backgroundColor: '#FFFFFF',
+    marginHorizontal: 24,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#F5EAE4',
+  },
+  emptyState: { color: '#9E5F3B', textAlign: 'center', marginHorizontal: 24, fontFamily: 'Inter-Medium', fontSize: 12, opacity: 0.7, marginTop: 4 },
+  
+  gridContainer: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 20, justifyContent: 'space-between' },
   gridCard: { 
     width: '47%', 
-    height: 250, 
-    backgroundColor: '#9E5F3B', 
-    borderRadius: 25, 
-    marginBottom: 15, 
-    overflow: 'hidden' 
+    backgroundColor: '#FFFFFF', 
+    borderRadius: 20, 
+    marginBottom: 16, 
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#F5EAE4',
+    ...Platform.select({
+      ios: { shadowColor: '#5C3826', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.06, shadowRadius: 6 },
+      android: { elevation: 3 }
+    })
   },
   gridImage: { 
     width: '100%', 
-    height: '52%', 
+    height: 120, 
     resizeMode: 'cover' 
   },
   gridOverlay: { 
     padding: 12, 
-    flex: 1, 
-    justifyContent: 'space-between' 
+    justifyContent: 'space-between',
+    flex: 1
   },
-  gridFoodName: { color: 'white', fontSize: 14, fontFamily: 'Inter-SemiBold', lineHeight: 18 },
-  btnLihatResepGrid: { backgroundColor: 'rgba(255,255,255,0.2)', paddingVertical: 5, paddingHorizontal: 10, borderRadius: 10, alignSelf: 'flex-start' },
-  btnResepTextSmall: { color: 'white', fontSize: 10, fontFamily: 'Inter-Bold' },
+  gridFoodName: { color: '#3A2214', fontSize: 13, fontFamily: 'Inter-SemiBold', lineHeight: 16, marginBottom: 8, minHeight: 32 },
+  
+  // Pembaruan Tombol Grid: Diubah menjadi Coklat Solid agar konsisten
+  btnLihatResepGrid: { 
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#9E5F3B', 
+    paddingVertical: 4, 
+    paddingHorizontal: 12, 
+    borderRadius: 8,
+    alignSelf: 'flex-start'
+  },
+  btnResepTextSmall: { color: '#FFFFFF', fontSize: 10, fontFamily: 'Inter-Bold', marginRight: 2 },
 });

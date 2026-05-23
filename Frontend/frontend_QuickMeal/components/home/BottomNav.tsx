@@ -13,7 +13,8 @@ const ICON_MAP: Record<string, string> = {
 function resolveRoute(label: string) {
   const l = label.toLowerCase();
   if (l.includes("home")) return '/(tabs)';
-  if (l.includes("explore") || l.includes("rec")) return '/(tabs)/explore';
+  if (l.includes("rec")) return '/from_resep';
+  if (l.includes("explore") || l.includes("list")) return '/list';
   if (l.includes("profile")) return '/profile';
   return '/(tabs)';
 }

@@ -1,1 +1,1 @@
-export { default } from './(tabs)/explore';
+export { default } from './(tabs)/list';

@@ -12,6 +12,13 @@ interface ResepItem {
   price: string;
   time: string;
   image: string;
+  ingredients?: Array<{
+    id?: string;
+    ingredient_id?: string;
+    ingredient_name?: string;
+    quantity?: string;
+    price_estimate?: number;
+  }>;
 }
 
 export default function HasilRecResepScreen() {
@@ -28,10 +35,28 @@ export default function HasilRecResepScreen() {
   const budgetMax = params.budgetMax as string;
   const ingredients = params.ingredients as string;
 
+  const summaryTime = useMemo(() => {
+    if (!time) return '-';
+    const total = Number(time);
+    const hours = Math.floor(total / 60);
+    const minutes = total % 60;
+
+    if (hours > 0 && minutes > 0) return `${hours} jam ${minutes} menit`;
+    if (hours > 0) return `${hours} jam`;
+    return `${minutes} menit`;
+  }, [time]);
+
+  const ingredientList = useMemo(() => {
+    if (!ingredients) return [];
+    return ingredients
+      .split(',')
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }, [ingredients]);
+
   useEffect(() => {
     const fetchRecipes = async () => {
       try {
-        // Build query string with filter parameters
         const queryParams = new URLSearchParams();
         if (time) queryParams.append('time', time);
         if (budgetMin) queryParams.append('budgetMin', budgetMin);
@@ -53,6 +78,7 @@ export default function HasilRecResepScreen() {
             price: Number(item.totalIngredientPrice || item.price || 0).toLocaleString('id-ID'),
             time: item.cookingTime ? `${item.cookingTime} Menit` : '20 Menit',
             image: item.image || item.imageUrl || 'https://via.placeholder.com/300',
+            ingredients: Array.isArray(item.ingredients) ? item.ingredients : [],
           }));
 
           setRecipes(mappedRecipes);
@@ -86,72 +112,107 @@ export default function HasilRecResepScreen() {
           name: item.title, 
           imageUrl: item.image,
           price: item.price,
-          time: item.time
+          time: item.time,
+          ingredients: ingredients || ''
         }
       });
     }
   };
 
-  const renderCard = (item: ResepItem) => (
-    <TouchableOpacity 
-      key={item.id} 
-      style={styles.card}
-      activeOpacity={0.85}
-      onPress={() => handleRecipePress(item)}
-      disabled={saving}
-    >
-      <Image source={{ uri: item.image }} style={styles.cardImage} resizeMode="cover" />
-      <View style={styles.cardInfo}>
-        <Text style={styles.cardTitle}>{item.title}</Text>
-        
-        <View style={styles.cardRow}>
-          <Text style={styles.cardPrice}>Rp. {item.price}</Text>
-          <View style={styles.timeRow}>
-            <Ionicons name="time-outline" size={14} color="rgba(255, 255, 255, 0.8)" />
-            <Text style={styles.cardTime}>{item.time}</Text>
+  const renderCard = (item: ResepItem) => {
+    return (
+      <TouchableOpacity 
+        key={item.id} 
+        style={styles.premiumCard}
+        activeOpacity={0.85}
+        onPress={() => handleRecipePress(item)}
+        disabled={saving}
+      >
+        <Image source={{ uri: item.image }} style={styles.premiumFoodImage} resizeMode="cover" />
+        <View style={styles.premiumCardInfo}>
+          <View>
+            <Text style={styles.premiumFoodName} numberOfLines={1}>{item.title}</Text>
+            
+            <View style={styles.cardRow}>
+              <View style={styles.priceBadgeContainer}>
+                <Ionicons name="pricetag-outline" size={11} color="#D47E13" style={{ marginRight: 4 }} />
+                <Text style={styles.premiumFoodPrice}>Rp {item.price}</Text>
+              </View>
+              
+              <View style={styles.timeRow}>
+                <Ionicons name="time-outline" size={12} color="#705243" style={{ marginRight: 4 }} />
+                <Text style={styles.premiumFoodTime}>{item.time}</Text>
+              </View>
+            </View>
           </View>
+
+          {saving ? (
+            <ActivityIndicator size="small" color="#9E5F3B" style={{ alignSelf: 'flex-start', marginTop: 4 }} />
+          ) : (
+            <View style={styles.premiumActionButton}>
+              <Text style={styles.premiumActionText}>Lihat Resep</Text>
+              <Ionicons name="chevron-forward" size={11} color="#FFFFFF" style={{ marginLeft: 4 }} />
+            </View>
+          )}
         </View>
-        {saving ? (
-          <ActivityIndicator size="small" color="white" style={{ marginTop: 6 }} />
-        ) : (
-          <Text style={styles.detailText}>Lihat Resep</Text>
-        )}
-      </View>
-    </TouchableOpacity>
-  );
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#9E5F3B" />
       
-      {/* 1. BAGIAN BACKGROUND YANG BISA KAMU UBAH SENDIRI JALURNYA */}
       <ImageBackground 
-        source={require('../assets/images/cook.png')} // Silakan ganti nama file gambar latar belakang di sini
+        source={require('../assets/images/cook.png')} 
         style={styles.backgroundImage}
         resizeMode="cover"
       >
-        {/* Overlay transparan tipis krem agar teks/konten di atas gambar latar belakang tetap terbaca jelas */}
         <View style={styles.darkOverlay}>
           
-          {/* HEADER COKELAT SOLID */}
+          {/* HEADER PREMIUM BLEND COKELAT */}
           <View style={styles.headerContainer}>
             <Text style={styles.headerSubtitle}>
               Berdasarkan waktu, budget & bahan kamu, kami rekomendasikan masak sendiri
             </Text>
+            
             {(time || budgetMin || budgetMax || ingredients) && (
-              <View style={{ marginTop: 15, backgroundColor: 'rgba(255,255,255,0.1)', paddingHorizontal: 12, paddingVertical: 10, borderRadius: 8 }}>
-                {time && (
-                  <Text style={{ color: 'white', fontSize: 12, marginBottom: 4 }}>
-                    Waktu: {Math.floor(Number(time) / 60)}h {Number(time) % 60}m
-                  </Text>
-                )}
-                {(budgetMin || budgetMax) && <Text style={{ color: 'white', fontSize: 12, marginBottom: 4 }}>Budget: Rp {budgetMin} - Rp {budgetMax}</Text>}
-                {ingredients && <Text style={{ color: 'white', fontSize: 12 }}>Bahan: {ingredients}</Text>}
+              <View style={styles.summaryCard}>
+                <Text style={styles.summaryTitle}>Input dari form</Text>
+
+                <View style={styles.summaryGrid}>
+                  <View style={styles.summaryItem}>
+                    <Text style={styles.summaryLabel}>Waktu</Text>
+                    <Text style={styles.summaryValue}>{summaryTime}</Text>
+                  </View>
+
+                  <View style={styles.summaryItem}>
+                    <Text style={styles.summaryLabel}>Budget</Text>
+                    <Text style={styles.summaryValue}>
+                      {budgetMin || budgetMax ? `Rp ${budgetMin || '-'} - Rp ${budgetMax || '-'}` : '-'}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.summaryItemFull}>
+                  <Text style={styles.summaryLabel}>Bahan</Text>
+                  <View style={styles.ingredientWrap}>
+                    {ingredientList.length > 0 ? (
+                      ingredientList.map((ingredient) => (
+                        <View key={ingredient} style={styles.ingredientChip}>
+                          <Text style={styles.ingredientChipText}>{ingredient}</Text>
+                        </View>
+                      ))
+                    ) : (
+                      <Text style={styles.summaryValue}>-</Text>
+                    )}
+                  </View>
+                </View>
               </View>
             )}
           </View>
-          
-          {/* DAFTAR KONTEN */}
+
+          {/* AREA KONTEN UTAMA */}
           {loading ? (
             <View style={styles.loadingWrap}>
               <ActivityIndicator size="large" color="#9E5F3B" />
@@ -168,14 +229,16 @@ export default function HasilRecResepScreen() {
               renderItem={({ item }) => renderCard(item)}
               contentContainerStyle={styles.listContent}
               showsVerticalScrollIndicator={false}
-              ListHeaderComponent={<Text style={styles.sectionTitle}>Rekomendasi Terbaik</Text>}
+              ListHeaderComponent={<Text style={styles.sectionTitle}>🔥 Rekomendasi Terbaik</Text>}
               ListFooterComponent={
-                <View style={{ marginTop: 10 }}>
-                  <Text style={styles.sectionTitle}>Pilihan Lainnya</Text>
+                <View style={{ marginTop: 8 }}>
+                  <Text style={styles.sectionTitle}>💡 Pilihan Lainnya</Text>
                   {otherRecipes.length > 0 ? (
                     otherRecipes.map((item) => renderCard(item))
                   ) : (
-                    <Text style={styles.emptyText}>Belum ada rekomendasi lain.</Text>
+                    <View style={styles.cleanEmptyContainer}>
+                      <Text style={styles.emptyText}>Belum ada rekomendasi lain.</Text>
+                    </View>
                   )}
                 </View>
               }
@@ -192,13 +255,13 @@ export default function HasilRecResepScreen() {
 
               {/* Tombol Tengah Bulat Menembus Batas */}
               <View style={styles.centerIconWrapper}>
-                <TouchableOpacity style={styles.centerIconBg} onPress={() => router.push('/food_rec')}>
+                <TouchableOpacity style={styles.centerIconBg} onPress={() => router.push('/from_resep')}>
                   <Ionicons name="search" size={28} color="white" />
                 </TouchableOpacity>
                 <Text style={styles.navTextCenter}>Get Food Rec</Text>
               </View>
 
-              <TouchableOpacity style={styles.navItem} onPress={() => router.push('/explore')}>
+              <TouchableOpacity style={styles.navItem} onPress={() => router.push('/list')}>
                 <Ionicons name="file-tray-full-outline" size={24} color="white" />
                 <Text style={styles.navText}>List</Text>
               </TouchableOpacity>
@@ -214,58 +277,148 @@ export default function HasilRecResepScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   backgroundImage: { flex: 1, width: '100%', height: '100%' },
-  darkOverlay: { flex: 1, backgroundColor: 'rgba(255, 248, 239, 0.4)' }, // Mengatur kepekatan background (ubah 0.4 jika ingin lebih transparan/gelap)
+  darkOverlay: { flex: 1, backgroundColor: 'rgba(252, 248, 245, 0.85)' }, // Diubah menjadi dominan krem cerah agar senada dengan ListScreen
+  
   headerContainer: { 
     backgroundColor: '#9E5F3B', 
     paddingTop: Platform.OS === 'ios' ? 60 : 40, 
-    paddingBottom: 25, 
-    paddingHorizontal: 30,
-    alignItems: 'center'
+    paddingBottom: 22, 
+    paddingHorizontal: 24,
+    alignItems: 'center',
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
   },
   headerSubtitle: { 
-    color: 'white', 
-    fontSize: 14, 
-    fontWeight: '600',
+    color: '#FFFFFF', 
+    fontSize: 13, 
+    fontFamily: Platform.OS === 'ios' ? 'HelveticaNeue-Medium' : 'sans-serif-medium',
     textAlign: 'center', 
-    lineHeight: 20 
+    lineHeight: 18,
+    opacity: 0.95
   },
+  summaryCard: {
+    marginTop: 14,
+    width: '100%',
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.25)',
+    borderRadius: 16,
+    padding: 12,
+  },
+  summaryTitle: {
+    color: '#FFF8EF',
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+    marginBottom: 10,
+  },
+  summaryGrid: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  summaryItem: {
+    flex: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 10,
+    padding: 10,
+  },
+  summaryItemFull: {
+    marginTop: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 10,
+    padding: 10,
+  },
+  summaryLabel: {
+    color: 'rgba(255, 255, 255, 0.75)',
+    fontSize: 10,
+    marginBottom: 4,
+    fontWeight: '600',
+  },
+  summaryValue: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  ingredientWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  ingredientChip: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  ingredientChipText: {
+    color: '#9E5F3B',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  
   listContent: { 
-    paddingHorizontal: 25, 
+    paddingHorizontal: 24, 
     paddingTop: 20,
-    paddingBottom: 110 // Mencegah konten tertutup oleh bar navigasi bawah
+    paddingBottom: 120 
   },
   sectionTitle: { 
     fontSize: 16, 
     fontWeight: 'bold', 
-    color: '#8D5B3E', 
-    marginBottom: 15,
-    fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif'
+    color: '#3A2214', 
+    marginBottom: 12,
+    marginTop: 6,
   },
-  card: { 
-    backgroundColor: '#9E5F3B', 
-    borderRadius: 15, 
+
+  // Premium UI Card Transformation (Kiblat ListScreen)
+  premiumCard: { 
+    backgroundColor: '#FFFFFF', 
+    borderRadius: 20, 
     flexDirection: 'row', 
     padding: 12, 
-    marginBottom: 15, 
+    marginBottom: 14, 
     alignItems: 'center',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 1.5,
+    borderWidth: 1,
+    borderColor: '#F5EAE4',
+    ...Platform.select({
+      ios: { shadowColor: '#5C3826', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.06, shadowRadius: 6 },
+      android: { elevation: 3 }
+    })
   },
-  cardImage: { width: 75, height: 75, borderRadius: 12, backgroundColor: '#EAEAEA' },
-  cardInfo: { flex: 1, marginLeft: 15 },
-  cardTitle: { color: 'white', fontSize: 14, fontWeight: 'bold' },
-  cardRow: { flexDirection: 'row', alignItems: 'center', marginTop: 5 },
-  cardPrice: { color: 'rgba(255, 255, 255, 0.9)', fontSize: 12, fontWeight: '500', marginRight: 20 },
+  premiumFoodImage: { width: 84, height: 84, borderRadius: 14, backgroundColor: '#F0F0F0' },
+  premiumCardInfo: { flex: 1, marginLeft: 14, justifyContent: 'space-between', height: 84, paddingVertical: 2 },
+  premiumFoodName: { color: '#3A2214', fontSize: 15, fontWeight: 'bold', lineHeight: 18 },
+  
+  cardRow: { flexDirection: 'row', alignItems: 'center', marginTop: 4, gap: 12 },
+  priceBadgeContainer: { flexDirection: 'row', alignItems: 'center' },
+  premiumFoodPrice: { color: '#D47E13', fontSize: 12, fontWeight: '600' },
+  
   timeRow: { flexDirection: 'row', alignItems: 'center' },
-  cardTime: { color: 'rgba(255, 255, 255, 0.9)', fontSize: 12, marginLeft: 4 },
-  detailText: { color: 'white', fontSize: 12, textDecorationLine: 'underline', marginTop: 6, fontWeight: '500' },
+  premiumFoodTime: { color: '#705243', fontSize: 11, fontWeight: '500' },
+  
+  premiumActionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#9E5F3B', 
+    paddingVertical: 5, 
+    paddingHorizontal: 12, 
+    borderRadius: 8,
+    alignSelf: 'flex-start'
+  },
+  premiumActionText: { color: '#FFFFFF', fontSize: 10, fontWeight: '700' },
+
+  cleanEmptyContainer: {
+    backgroundColor: '#FFFFFF',
+    padding: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#F5EAE4',
+    alignItems: 'center',
+  },
   loadingWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 30 },
-  loadingText: { color: '#8D5B3E', marginTop: 12, fontSize: 14, fontWeight: '600' },
+  loadingText: { color: '#9E5F3B', marginTop: 12, fontSize: 14, fontWeight: '600' },
   errorText: { color: '#B00020', fontSize: 14, textAlign: 'center', fontWeight: '600' },
-  emptyText: { color: '#8D5B3E', fontSize: 13, textAlign: 'center', marginTop: 12 },
+  emptyText: { color: '#705243', fontSize: 13, textAlign: 'center' },
   
   // --- BOTTOM FIXED NAVBAR STYLES ---
   navbarContainer: {
@@ -305,7 +458,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 4,
-    borderColor: '#FFF8EF', // Border luar tombol mengikuti warna dasar krem proyekmu
+    borderColor: '#FCF8F5', 
     marginTop: -35, 
     elevation: 4,
     shadowColor: '#000',

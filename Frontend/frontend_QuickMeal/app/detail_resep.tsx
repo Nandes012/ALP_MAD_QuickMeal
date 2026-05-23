@@ -1,9 +1,10 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import { StyleSheet, Text, View, Image, TouchableOpacity, ScrollView, StatusBar, ActivityIndicator, Platform } from 'react-native';
 import { VideoView, useVideoPlayer } from 'expo-video';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ScreenOrientation from 'expo-screen-orientation';
 import { API_BASE_URL } from '@/constants/api';
 import { useRecipeView } from '@/hooks/useRecipeView';
@@ -47,7 +48,6 @@ const formatCurrency = (value: number | undefined): string => {
   if (typeof value !== 'number' || Number.isNaN(value)) {
     return '0';
   }
-
   return value.toLocaleString('id-ID');
 };
 
@@ -58,6 +58,17 @@ export default function DetailResepScreen() {
   const fallbackName = params.name ? String(params.name) : 'Detail Resep';
   const fallbackImage = params.imageUrl ? decodeURIComponent(String(params.imageUrl)) : 'https://via.placeholder.com/900x600';
   const { saveRecipeView } = useRecipeView();
+
+  // Menangkap parameter ingredients dari router link asal jika ada
+  const routeIngredients = params.ingredients ? String(params.ingredients) : '';
+
+  const [availabilityParams, setAvailabilityParams] = useState<{
+    recipeId: string;
+    recipeName: string;
+    ingredients: string;
+    recipeIngredients: string;
+    missingIngredients: string;
+  } | null>(null);
 
   const [recipe, setRecipe] = useState<RecipeDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -94,6 +105,42 @@ export default function DetailResepScreen() {
           setRecipe(result.data);
           setError(null);
           await saveRecipeView(recipeId);
+
+          try {
+            const recipeIngredients = Array.isArray(result.data.ingredients)
+              ? result.data.ingredients.map((ing: any) => (ing.ingredient_name || ing.name || '').toString().toLowerCase().trim()).filter(Boolean)
+              : [];
+
+            const storedOwned = await AsyncStorage.getItem('owned_ingredients');
+            const ownedRaw = routeIngredients || storedOwned || '';
+            const ownedList = ownedRaw
+              ? ownedRaw.split(',').map((s) => s.trim()).filter(Boolean).map((s) => s.toLowerCase())
+              : [];
+
+            const missing = recipeIngredients.filter((name: string) => !ownedList.includes(name));
+
+            const savePayload = {
+              recipeId: recipeId,
+              recipeName: result.data.title || fallbackName,
+              ownedIngredients: ownedList,
+              recipeIngredients: recipeIngredients,
+              missingIngredients: missing,
+              computedAt: new Date().toISOString(),
+            };
+
+            await AsyncStorage.setItem(`missing_for_recipe_${recipeId}`, JSON.stringify(savePayload));
+            await AsyncStorage.setItem('last_missing_ingredients', JSON.stringify(savePayload));
+            
+            setAvailabilityParams({
+              recipeId,
+              recipeName: result.data.title || fallbackName,
+              ingredients: ownedList.join(','),
+              recipeIngredients: recipeIngredients.join(','),
+              missingIngredients: missing.join(','),
+            });
+          } catch (e) {
+            console.warn('Failed to compute/save missing ingredients', e);
+          }
         } else {
           setError('Invalid response from server');
         }
@@ -114,7 +161,6 @@ export default function DetailResepScreen() {
       return;
     }
     const fullUrl = `${API_BASE_URL.replace('/api', '')}/${encodeURI(recipe.video)}`;
-    console.log('Playing video URL:', fullUrl);
     setVideoUrl(fullUrl);
     setIsPlayingVideo(true);
     await ScreenOrientation.unlockAsync();
@@ -129,6 +175,15 @@ export default function DetailResepScreen() {
 
   const handleRotateLandscape = async () => {
     await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE);
+  };
+
+  const handleOpenAvailability = () => {
+    if (!availabilityParams) return;
+
+    router.push({
+      pathname: '/bahan_tersedia',
+      params: availabilityParams,
+    });
   };
 
   if (loading) {
@@ -187,10 +242,6 @@ export default function DetailResepScreen() {
               style={styles.videoPlayer}
               player={player}
               nativeControls={true}
-              onError={(error) => {
-                console.error('Video error:', error);
-                alert('Error playing video');
-              }}
             />
             <TouchableOpacity style={styles.closeVideoButton} onPress={handleStopVideo}>
               <Ionicons name="close" size={28} color="white" />
@@ -228,6 +279,21 @@ export default function DetailResepScreen() {
               <Text style={styles.chipText}>Rp. {price}</Text>
             </View>
           </View>
+
+          {/* LOGIKA CONDITIONAL RENDERING: Hanya muncul jika diklik dari form rekomendasi resep */}
+          {routeIngredients ? (
+            <TouchableOpacity
+              style={styles.availabilityButton}
+              activeOpacity={0.9}
+              onPress={handleOpenAvailability}
+              disabled={!availabilityParams}
+            >
+              <Ionicons name="storefront-outline" size={16} color={availabilityParams ? '#fff' : '#C9B6A8'} />
+              <Text style={[styles.availabilityButtonText, !availabilityParams && styles.availabilityButtonTextDisabled]}>
+                Lihat ketersediaan bahan
+              </Text>
+            </TouchableOpacity>
+          ) : null}
         </View>
 
         <View style={styles.cardContainer}>
@@ -331,17 +397,34 @@ const styles = StyleSheet.create({
   mainImage: { width: '100%', height: '100%' },
   playButton: { position: 'absolute', top: '50%', left: '50%', transform: [{ translateX: -27.5 }, { translateY: -27.5 }], backgroundColor: 'rgba(255, 255, 255, 0.9)', width: 55, height: 55, borderRadius: 27.5, justifyContent: 'center', alignItems: 'center', elevation: 4 },
   videoPlayer: { width: '100%', height: '100%' },
-  videoOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 100 },
   videoFullscreen: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, width: '100%', height: '100%', zIndex: 1000 },
   closeVideoButton: { position: 'absolute', top: 10, right: 10, backgroundColor: 'rgba(0, 0, 0, 0.6)', width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center', zIndex: 10 },
   rotateButton: { position: 'absolute', bottom: 20, left: 20, backgroundColor: 'rgba(0, 0, 0, 0.6)', width: 45, height: 45, borderRadius: 22.5, justifyContent: 'center', alignItems: 'center', zIndex: 10 },
-  fullscreenButton: { position: 'absolute', bottom: 50, right: 10, backgroundColor: 'rgba(0, 0, 0, 0.6)', width: 45, height: 45, borderRadius: 22.5, justifyContent: 'center', alignItems: 'center', zIndex: 10 },
   summaryCard: { backgroundColor: '#FFFFFF', borderRadius: 18, padding: 16, borderWidth: 1, borderColor: '#EFE3D5', marginTop: 15, marginBottom: 16, elevation: 1 },
   recipeTitle: { fontSize: 18, fontWeight: '700', color: '#333333', marginBottom: 8, fontFamily: Platform.OS === 'android' ? 'serif' : 'Georgia' },
   subtitleText: { fontSize: 13, color: '#6B6B6B', lineHeight: 18 },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 12 },
   chip: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#F9F2ED', paddingHorizontal: 10, paddingVertical: 8, borderRadius: 999 },
   chipText: { fontSize: 12, color: '#8D5B3E', fontWeight: '600' },
+  availabilityButton: {
+    marginTop: 14,
+    backgroundColor: '#9E5F3B',
+    borderRadius: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  availabilityButtonText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  availabilityButtonTextDisabled: {
+    color: '#C9B6A8',
+  },
   cardContainer: { backgroundColor: 'white', borderRadius: 18, borderWidth: 1, borderColor: '#EFE3D5', marginBottom: 15, overflow: 'hidden', elevation: 1 },
   accordionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 14, paddingHorizontal: 18, backgroundColor: 'white' },
   accordionTitle: { fontSize: 14, fontWeight: '600', color: '#1A1A1A' },
