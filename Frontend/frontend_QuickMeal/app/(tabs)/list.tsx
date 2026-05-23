@@ -1,12 +1,13 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { StyleSheet, Text, View, Image, TouchableOpacity, FlatList, StatusBar, ActivityIndicator } from 'react-native';
+import { StyleSheet, Text, View, Image, TouchableOpacity, FlatList, StatusBar, ActivityIndicator, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useFonts, Langar_400Regular } from '@expo-google-fonts/langar';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Ionicons } from '@expo/vector-icons';
 import { API_BASE_URL, getApiHost } from '@/constants/api';
 
-// Import CustomNavbar resmi (Path keluar dua tingkat dari app/(tabs)/list.tsx)
+// Import CustomNavbar resmi
 import CustomNavbar from '../../components/CustomNavbar';
 
 interface FoodItem {
@@ -15,6 +16,25 @@ interface FoodItem {
   price: string;
   imageUri: string;
 }
+
+// Kategori Masak (Sama seperti Home)
+const RECIPE_CATEGORIES = [
+  { id: 'all', name: 'Semua', icon: '🍽️', searchKey: '' },
+  { id: '1', name: 'Gorengan', icon: '🔥', searchKey: 'Goreng' },
+  { id: '2', name: 'Sayuran', icon: '🥬', searchKey: 'Sayur' },
+  { id: '3', name: 'Seafood', icon: '🐟', searchKey: 'Ikan' },
+  { id: '4', name: 'Ayam', icon: '🍗', searchKey: 'Ayam' },
+  { id: '5', name: 'Daging', icon: '🥩', searchKey: 'Daging' },
+];
+
+// Kategori Bahan Baku
+const INGREDIENT_CATEGORIES = [
+  { id: 'all', name: 'Semua', icon: '🛒', searchKey: '' },
+  { id: '1', name: 'Hewani', icon: '🥩', searchKey: 'Hewani' },
+  { id: '2', name: 'Nabati', icon: '🥦', searchKey: 'Nabati' },
+  { id: '3', name: 'Olahan', icon: '🥫', searchKey: 'Olahan' },
+  { id: '4', name: 'Bumbu', icon: '🌶️', searchKey: 'Bumbu' },
+];
 
 async function fetchList(activeTab: 'Masak' | 'Bahan') {
   const endpoint = activeTab === 'Masak' ? '/recipes' : '/ingredients';
@@ -57,8 +77,8 @@ export default function ListScreen() {
   const [data, setData] = useState<FoodItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [profilePicture, setProfilePicture] = useState<string>('https://via.placeholder.com/150');
+  const [activeCategory, setActiveCategory] = useState('all');
 
-  // Load font Inter secara asinkron
   const [fontsLoaded] = useFonts({
     'Inter-Regular': Langar_400Regular,
     'Inter-Medium': Langar_400Regular,
@@ -69,10 +89,7 @@ export default function ListScreen() {
   const fetchProfilePicture = useCallback(async () => {
     try {
       const token = await AsyncStorage.getItem('auth_token');
-
-      if (!token) {
-        return;
-      }
+      if (!token) return;
 
       const response = await fetch(`${API_BASE_URL}/auth/me`, {
         method: 'GET',
@@ -83,9 +100,7 @@ export default function ListScreen() {
         },
       });
 
-      if (!response.ok) {
-        throw new Error(`API error: ${response.status}`);
-      }
+      if (!response.ok) throw new Error(`API error: ${response.status}`);
 
       const result = await response.json();
       if (result?.success && result?.data?.profile_picture) {
@@ -102,6 +117,7 @@ export default function ListScreen() {
 
     const loadList = async () => {
       setLoading(true);
+      setActiveCategory('all');
 
       try {
         const list = await fetchList(activeTab);
@@ -133,22 +149,6 @@ export default function ListScreen() {
     }, [fetchProfilePicture])
   );
 
-  if (!fontsLoaded) {
-    return (
-      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
-        <ActivityIndicator size="large" color="#9E5F3B" />
-      </View>
-    );
-  }
-
-  if (loading) {
-    return (
-      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
-        <ActivityIndicator size="large" color="#9E5F3B" />
-      </View>
-    );
-  }
-
   const handleItemPress = (item: FoodItem) => {
     const cleanName = item.name.replace(/\s+/g, ' ').trim();
 
@@ -165,42 +165,68 @@ export default function ListScreen() {
     }
   };
 
+  const getFilteredData = () => {
+    if (activeCategory === 'all') return data;
+
+    const currentCategories = activeTab === 'Masak' ? RECIPE_CATEGORIES : INGREDIENT_CATEGORIES;
+    const selectedCat = currentCategories.find(c => c.id === activeCategory);
+    if (!selectedCat) return data;
+
+    return data.filter(item => 
+      item.name.toLowerCase().includes(selectedCat.searchKey.toLowerCase())
+    );
+  };
+
+  const displayedData = getFilteredData();
+
   const renderFoodItem = ({ item }: { item: FoodItem }) => (
     <TouchableOpacity 
-      style={styles.card}
-      activeOpacity={0.9}
+      style={styles.premiumCard}
+      activeOpacity={0.85}
       onPress={() => handleItemPress(item)}
     >
-      <View style={styles.cardInfo}>
-        <Text style={styles.foodName} numberOfLines={1}>{item.name}</Text>
-        <Text style={styles.foodPrice}>Rp. {item.price}</Text>
+      <Image source={{ uri: item.imageUri }} style={styles.premiumFoodImage} resizeMode="cover" />
+      
+      <View style={styles.premiumCardInfo}>
+        <View>
+          <Text style={styles.premiumFoodName} numberOfLines={2}>{item.name}</Text>
+          <View style={styles.priceBadgeContainer}>
+            <Ionicons name="pricetag-outline" size={11} color="#D47E13" style={{ marginRight: 4 }} />
+            <Text style={styles.premiumFoodPrice}>Rp {item.price}</Text>
+          </View>
+        </View>
         
-        <View style={styles.actionButton}>
-          <Text style={styles.actionButtonText}>
-            {activeTab === 'Masak' ? 'Resep' : 'Detail Bahan'}
+        <View style={styles.premiumActionButton}>
+          <Text style={styles.premiumActionText}>
+            {activeTab === 'Masak' ? 'Lihat Resep' : 'Detail Bahan'}
           </Text>
+          {/* Mengubah 'arrow-forward-circle' menjadi 'chevron-forward' agar bundarnya hilang */}
+          <Ionicons 
+            name="chevron-forward" 
+            size={11} 
+            color="#FFFFFF" 
+            style={{ marginLeft: 4 }} 
+          />
         </View>
       </View>
-
-      <Image source={{ uri: item.imageUri }} style={styles.foodImage} resizeMode="cover" />
     </TouchableOpacity>
   );
 
+  if (!fontsLoaded) return null;
+
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFF8EF" />
+      <StatusBar barStyle="dark-content" backgroundColor="#FCF8F5" />
       
+      {/* HEADER PREMIUM */}
       <SafeAreaView edges={['top']} style={styles.header}>
         <Text style={styles.logoText}>QuickMeal</Text>
-        <TouchableOpacity onPress={() => router.push("/profile")}>
-          <Image 
-            source={{ uri: profilePicture }} 
-            style={styles.profileImage} 
-          />
+        <TouchableOpacity activeOpacity={0.8} onPress={() => router.push("/profile")}>
+          <Image source={{ uri: profilePicture }} style={styles.profileImage} />
         </TouchableOpacity>
       </SafeAreaView>
 
-      {/* --- TAB SWITCHER OVAL --- */}
+      {/* TAB SWITCHER */}
       <View style={styles.tabOuterContainer}>
         <View style={styles.tabContainer}>
           <TouchableOpacity 
@@ -219,18 +245,62 @@ export default function ListScreen() {
         </View>
       </View>
 
-      {/* Judul Section Dinamis */}
-      <Text style={styles.sectionTitle}>
-        {activeTab === 'Masak' ? 'Resep Makanan' : 'Info Bahan'}
-      </Text>
+      {/* DYNAMIC HORIZONTAL CATEGORY COMPONENT */}
+      <View style={styles.categoryBlock}>
+        <FlatList
+          horizontal
+          data={activeTab === 'Masak' ? RECIPE_CATEGORIES : INGREDIENT_CATEGORIES}
+          keyExtractor={(cat) => cat.id}
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.categoryScrollPadding}
+          renderItem={({ item: cat }) => {
+            const isSelected = activeCategory === cat.id;
+            return (
+              <TouchableOpacity
+                style={styles.categoryItem}
+                activeOpacity={0.7}
+                onPress={() => setActiveCategory(cat.id)}
+              >
+                <View style={[styles.categoryIconCircle, isSelected && styles.categoryIconCircleActive]}>
+                  <Text style={styles.categoryEmoji}>{cat.icon}</Text>
+                </View>
+                <Text style={[styles.categoryName, isSelected && styles.categoryNameActive]} numberOfLines={1}>
+                  {cat.name}
+                </Text>
+              </TouchableOpacity>
+            );
+          }}
+        />
+      </View>
 
-      <FlatList
-        data={data}
-        renderItem={renderFoodItem}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.listContent}
-        showsVerticalScrollIndicator={false}
-      />
+      {/* JUDUL SEKSI */}
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>
+          {activeTab === 'Masak' ? '🔥 Pilihan Resep Spesial' : '🥦 Jelajahi Bahan Baku'}
+        </Text>
+      </View>
+
+      {/* DATA AREA */}
+      {loading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#9E5F3B" />
+        </View>
+      ) : displayedData.length > 0 ? (
+        <FlatList
+          data={displayedData}
+          renderItem={renderFoodItem}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+        />
+      ) : (
+        <View style={styles.cleanEmptyContainer}>
+          <Ionicons name="basket-outline" size={32} color="#C4A493" />
+          <Text style={styles.emptyState}>
+            Tidak ada item untuk kategori ini.
+          </Text>
+        </View>
+      )}
 
       <CustomNavbar />
     </View>
@@ -238,50 +308,105 @@ export default function ListScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FFF8EF' },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 25, paddingVertical: 10 },
-  logoText: { fontSize: 24, color: '#9E5F3B', fontFamily: 'Inter-Bold' },
-  profileImage: { width: 42, height: 42, borderRadius: 21, borderWidth: 1.5, borderColor: '#5b2f20' },
-  tabOuterContainer: { paddingHorizontal: 25, marginTop: 10 },
-  tabContainer: { 
-    flexDirection: 'row', backgroundColor: '#FFFFFF', borderRadius: 35, padding: 4, alignItems: 'center',
-    elevation: 3, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4
-  },
-  tabButton: { flex: 1, paddingVertical: 12, alignItems: 'center', borderRadius: 30 },
-  activeTabBg: { backgroundColor: '#9E5F3B' },
-  tabText: { fontSize: 16, color: '#1A1A1A', fontFamily: 'Inter-Medium' },
-  activeTabText: { color: '#FFFFFF', fontFamily: 'Inter-Bold' },
-  sectionTitle: { textAlign: 'center', fontSize: 22, color: '#9E5F3B', marginTop: 20, marginBottom: 15, fontFamily: 'Inter-SemiBold' },
-  listContent: { paddingHorizontal: 25, paddingBottom: 110 },
-  card: { 
-    backgroundColor: '#9E5F3B', 
-    borderRadius: 24, 
+  container: { flex: 1, backgroundColor: '#FCF8F5' },
+  header: { 
     flexDirection: 'row', 
-    padding: 16, 
-    marginBottom: 15, 
+    justifyContent: 'space-between', 
     alignItems: 'center', 
-    justifyContent: 'space-between',
-    elevation: 3 
+    paddingHorizontal: 24, 
+    paddingVertical: 12 
   },
-  cardInfo: { flex: 1, marginRight: 15, justifyContent: 'center' },
-  foodName: { color: 'white', fontSize: 18, fontFamily: 'Inter-SemiBold', marginBottom: 4 },
-  foodPrice: { color: 'rgba(255, 255, 255, 0.9)', fontSize: 14, fontFamily: 'Inter-Regular', marginBottom: 12 },
-  actionButton: {
-    backgroundColor: 'rgba(255, 255, 255, 0.3)', 
-    paddingVertical: 6,
-    paddingHorizontal: 16,
-    borderRadius: 15,
-    alignSelf: 'flex-start',
+  logoText: { fontSize: 24, color: '#3A2214', fontFamily: 'Inter-Bold', letterSpacing: -0.5 },
+  profileImage: { width: 44, height: 44, borderRadius: 22, borderWidth: 2, borderColor: '#FFFFFF', backgroundColor: '#EFEFEF' },
+  
+  tabOuterContainer: { paddingHorizontal: 24, marginTop: 4 },
+  tabContainer: { 
+    flexDirection: 'row', 
+    backgroundColor: '#FFFFFF', 
+    borderRadius: 20, 
+    padding: 4, 
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#F5EAE4',
+    ...Platform.select({
+      ios: { shadowColor: '#5C3826', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 4 },
+      android: { elevation: 2 }
+    })
   },
-  actionButtonText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontFamily: 'Inter-Medium',
+  tabButton: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 16 },
+  activeTabBg: { backgroundColor: '#9E5F3B' },
+  tabText: { fontSize: 15, color: '#705243', fontFamily: 'Inter-Medium' },
+  activeTabText: { color: '#FFFFFF', fontFamily: 'Inter-Bold' },
+
+  categoryBlock: { marginTop: 18, marginBottom: 4 },
+  categoryScrollPadding: { paddingLeft: 24, paddingRight: 10 },
+  categoryItem: { alignItems: 'center', marginRight: 16, width: 68 },
+  categoryIconCircle: { 
+    width: 56, 
+    height: 56, 
+    borderRadius: 28, 
+    backgroundColor: '#FFFFFF', 
+    alignItems: 'center', 
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#F5EAE4',
+    ...Platform.select({
+      ios: { shadowColor: '#5C3826', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.05, shadowRadius: 4 },
+      android: { elevation: 2 }
+    })
   },
-  foodImage: { 
-    width: 95, 
-    height: 95, 
+  categoryIconCircleActive: { backgroundColor: '#9E5F3B', borderColor: '#9E5F3B' },
+  categoryEmoji: { fontSize: 22 },
+  categoryName: { fontSize: 11, color: '#543625', marginTop: 6, textAlign: 'center', fontFamily: 'Inter-Medium' },
+  categoryNameActive: { color: '#9E5F3B', fontFamily: 'Inter-Bold' },
+
+  sectionHeader: { paddingHorizontal: 24, marginTop: 16, marginBottom: 12 },
+  sectionTitle: { fontSize: 16, color: '#3A2214', fontFamily: 'Inter-Bold', letterSpacing: -0.2 },
+  
+  listContent: { paddingHorizontal: 24, paddingBottom: 130 },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+
+  premiumCard: { 
+    backgroundColor: '#FFFFFF', 
+    borderRadius: 20, 
+    flexDirection: 'row', 
+    padding: 12, 
+    marginBottom: 14, 
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#F5EAE4',
+    ...Platform.select({
+      ios: { shadowColor: '#5C3826', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.06, shadowRadius: 6 },
+      android: { elevation: 3 }
+    })
+  },
+  premiumFoodImage: { width: 84, height: 84, borderRadius: 14, backgroundColor: '#F0F0F0' },
+  premiumCardInfo: { flex: 1, marginLeft: 14, justifyContent: 'space-between', height: 84, paddingVertical: 2 },
+  premiumFoodName: { color: '#3A2214', fontSize: 15, fontFamily: 'Inter-Bold', lineHeight: 18 },
+  
+  priceBadgeContainer: { flexDirection: 'row', alignItems: 'center', marginTop: 3 },
+  premiumFoodPrice: { color: '#D47E13', fontSize: 12, fontFamily: 'Inter-SemiBold' },
+  
+  premiumActionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#9E5F3B', 
+    paddingVertical: 5, 
+    paddingHorizontal: 12, 
+    borderRadius: 8,
+    alignSelf: 'flex-start'
+  },
+  premiumActionText: { color: '#FFFFFF', fontSize: 10, fontFamily: 'Inter-Bold' },
+
+  cleanEmptyContainer: { 
+    alignItems: 'center', 
+    justifyContent: 'center', 
+    paddingVertical: 40, 
+    backgroundColor: '#FFFFFF', 
+    marginHorizontal: 24, 
     borderRadius: 20,
-    backgroundColor: '#FFFFFF'
+    borderWidth: 1,
+    borderColor: '#F5EAE4'
   },
+  emptyState: { color: '#9E5F3B', textAlign: 'center', marginTop: 8, fontFamily: 'Inter-Medium', fontSize: 13, opacity: 0.7 },
 });

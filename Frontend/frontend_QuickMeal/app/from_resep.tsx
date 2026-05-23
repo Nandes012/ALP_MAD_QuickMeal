@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, TextInput, TouchableOpacity, ImageBackground, Dimensions, ScrollView, Modal, FlatList, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { API_BASE_URL } from '../constants/api';
@@ -88,7 +89,7 @@ export default function FromResepScreen() {
     return false;
   };
 
-  const nextStep = () => {
+  const nextStep = async () => {
     // Validate current step before proceeding
     if (step === 2) {
       // Check budget fields are filled
@@ -117,6 +118,12 @@ export default function FromResepScreen() {
         budgetMax: budgetMax,
         ingredients: bahan.filter(b => b.trim()).join(',')
       };
+      try {
+        await AsyncStorage.setItem('owned_ingredients', formData.ingredients);
+      } catch (e) {
+        console.warn('Failed to save owned ingredients', e);
+      }
+
       router.push({
         pathname: '/hasil_rec_resep',
         params: formData
@@ -211,15 +218,21 @@ export default function FromResepScreen() {
         style={styles.backgroundImage}
       >
         <SafeAreaView style={styles.overlay}>
-          {/* Header */}
-          <View style={styles.header}>
-            <Text style={styles.headerTitle}>Isi Kondisi Kamu</Text>
-            <Text style={styles.headerSubtitle}>kami butuh tahu kondisi kamu untuk memberikan rekomendasi resep terbaik</Text>
-          </View>
+          <ScrollView
+            style={styles.scrollView}
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            {/* Header */}
+            <View style={styles.header}>
+              <Text style={styles.headerTitle}>Isi Kondisi Kamu</Text>
+              <Text style={styles.headerSubtitle}>kami butuh tahu kondisi kamu untuk memberikan rekomendasi resep terbaik</Text>
+            </View>
 
-          {/* Form Content */}
-          <View style={styles.content}>
-            <View style={styles.card}>
+            {/* Form Content */}
+            <View style={styles.content}>
+              <View style={styles.card}>
               <Text style={styles.stepText}>Pertanyaan {step} dari 3</Text>
               <View style={styles.progressBg}>
                 <View style={[styles.progressFill, { width: `${(step / 3) * 100}%` }]} />
@@ -430,7 +443,7 @@ export default function FromResepScreen() {
 
               {/* Navigation Buttons */}
               <View style={styles.btnRow}>
-                <TouchableOpacity style={styles.btnBack} onPress={() => step > 1 ? setStep(step - 1) : router.back()}>
+                <TouchableOpacity style={styles.btnBack} onPress={() => step > 1 ? setStep(step - 1) : router.replace('/home')}>
                   <Text style={styles.textBack}>‹ Kembali</Text>
                 </TouchableOpacity>
                 <TouchableOpacity 
@@ -443,8 +456,9 @@ export default function FromResepScreen() {
                   </Text>
                 </TouchableOpacity>
               </View>
+              </View>
             </View>
-          </View>
+          </ScrollView>
         </SafeAreaView>
       </ImageBackground>
     </View>
@@ -455,10 +469,12 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   backgroundImage: { flex: 1 },
   overlay: { flex: 1, backgroundColor: 'rgba(255,255,255,0.1)' },
+  scrollView: { flex: 1 },
+  scrollContent: { flexGrow: 1, paddingBottom: 24 },
   header: {  padding: 25, alignItems: 'center' },
   headerTitle: { color: '#9E5F3B', fontSize: 24, fontWeight: 'bold', textShadowColor: 'rgba(0, 0, 0, 0.3)', textShadowOffset: {width: 1, height: 1}, textShadowRadius: 2 },
   headerSubtitle: { color: '#9E5F3B', fontSize: 15, textAlign: 'center', marginTop: 5, fontWeight: '500' },
-  content: { flex: 1, padding: 20, justifyContent: 'center' },
+  content: { flex: 1, padding: 20, justifyContent: 'flex-start' },
   card: { backgroundColor: 'white', borderRadius: 20, padding: 20, borderWidth: 1, borderColor: '#9E5F3B', elevation: 5 },
   stepText: { fontSize: 12, color: '#9E5F3B', marginBottom: 5 },
   progressBg: { height: 6, backgroundColor: '#EEE', borderRadius: 3, marginBottom: 20 },
