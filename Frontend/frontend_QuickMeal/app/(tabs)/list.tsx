@@ -15,10 +15,18 @@ interface FoodItem {
   name: string;
   price: string;
   imageUri: string;
+  tags?: Array<{ id: number; name: string; icon: string; type: string }>;
 }
 
-// Kategori Masak (Sama seperti Home)
-const RECIPE_CATEGORIES = [
+interface Tag {
+  id: string | number;
+  name: string;
+  icon: string;
+  type: string;
+}
+
+// Fallback kategori jika tag gagal di-fetch
+const FALLBACK_RECIPE_CATEGORIES = [
   { id: 'all', name: 'Semua', icon: '🍽️', searchKey: '' },
   { id: '1', name: 'Gorengan', icon: '🔥', searchKey: 'Goreng' },
   { id: '2', name: 'Sayuran', icon: '🥬', searchKey: 'Sayur' },
@@ -27,14 +35,47 @@ const RECIPE_CATEGORIES = [
   { id: '5', name: 'Daging', icon: '🥩', searchKey: 'Daging' },
 ];
 
-// Kategori Bahan Baku
-const INGREDIENT_CATEGORIES = [
+// Fallback kategori bahan jika tag gagal di-fetch
+const FALLBACK_INGREDIENT_CATEGORIES = [
   { id: 'all', name: 'Semua', icon: '🛒', searchKey: '' },
   { id: '1', name: 'Hewani', icon: '🥩', searchKey: 'Hewani' },
   { id: '2', name: 'Nabati', icon: '🥦', searchKey: 'Nabati' },
   { id: '3', name: 'Olahan', icon: '🥫', searchKey: 'Olahan' },
   { id: '4', name: 'Bumbu', icon: '🌶️', searchKey: 'Bumbu' },
 ];
+
+async function fetchTags(type: 'resep' | 'bahan') {
+  try {
+    const response = await fetch(`${API_BASE_URL}/tags?type=${type}`);
+
+    if (!response.ok) {
+      throw new Error(`API error ${response.status}`);
+    }
+
+    const json = await response.json();
+
+    if (!json?.success || !Array.isArray(json.data)) {
+      return [];
+    }
+
+    // Map API response to category format with 'all' option prepended
+    const tags = json.data.map((tag: Tag) => ({
+      id: String(tag.id),
+      name: tag.name,
+      icon: tag.icon,
+      type: tag.type,
+    }));
+
+    // Prepend 'all' option
+    return [
+      { id: 'all', name: 'Semua', icon: '🍽️', searchKey: '' },
+      ...tags
+    ];
+  } catch (error) {
+    console.error('Failed to fetch tags:', error);
+    throw error;
+  }
+}
 
 async function fetchList(activeTab: 'Masak' | 'Bahan') {
   const endpoint = activeTab === 'Masak' ? '/recipes' : '/ingredients';
@@ -56,6 +97,7 @@ async function fetchList(activeTab: 'Masak' | 'Bahan') {
       name: recipe.title || recipe.name || 'Resep',
       price: Number(recipe.totalIngredientPrice || recipe.price || 0).toLocaleString('id-ID'),
       imageUri: recipe.image || recipe.imageUrl || 'https://via.placeholder.com/300',
+      tags: recipe.tags || [],
     }));
 
     return Array.from(new Map<string, FoodItem>(recipes.map((item: FoodItem) => [item.id, item])).values());
@@ -66,6 +108,7 @@ async function fetchList(activeTab: 'Masak' | 'Bahan') {
     name: ingredient.name || 'Bahan',
     price: Number(ingredient.price_per_kg || ingredient.price || 0).toLocaleString('id-ID'),
     imageUri: ingredient.ingredient_picture || ingredient.image || 'https://via.placeholder.com/300',
+    tags: ingredient.tags || [],
   }));
 
   return Array.from(new Map<string, FoodItem>(ingredients.map((item: FoodItem) => [item.id, item])).values());
@@ -78,6 +121,9 @@ export default function ListScreen() {
   const [loading, setLoading] = useState(true);
   const [profilePicture, setProfilePicture] = useState<string>('https://via.placeholder.com/150');
   const [activeCategory, setActiveCategory] = useState('all');
+  const [categories, setCategories] = useState<any[]>([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(false);
+  const [tagsError, setTagsError] = useState(false);
 
   const [fontsLoaded] = useFonts({
     'Inter-Regular': Langar_400Regular,
@@ -136,7 +182,33 @@ export default function ListScreen() {
       }
     };
 
+    const loadTags = async () => {
+      setCategoriesLoading(true);
+      setTagsError(false);
+
+      try {
+        const tagType = activeTab === 'Masak' ? 'resep' : 'bahan';
+        const fetchedTags = await fetchTags(tagType as 'resep' | 'bahan');
+        if (mounted) {
+          setCategories(fetchedTags);
+        }
+      } catch (error) {
+        console.error('Failed to load tags:', error);
+        if (mounted) {
+          setTagsError(true);
+          // Use fallback categories
+          const fallback = activeTab === 'Masak' ? FALLBACK_RECIPE_CATEGORIES : FALLBACK_INGREDIENT_CATEGORIES;
+          setCategories(fallback);
+        }
+      } finally {
+        if (mounted) {
+          setCategoriesLoading(false);
+        }
+      }
+    };
+
     loadList();
+    loadTags();
 
     return () => {
       mounted = false;
@@ -168,12 +240,13 @@ export default function ListScreen() {
   const getFilteredData = () => {
     if (activeCategory === 'all') return data;
 
-    const currentCategories = activeTab === 'Masak' ? RECIPE_CATEGORIES : INGREDIENT_CATEGORIES;
-    const selectedCat = currentCategories.find(c => c.id === activeCategory);
-    if (!selectedCat) return data;
+    if (categories.length === 0) return data;
 
+    const selectedTagId = activeCategory;
+
+    // Filter by tag ID - only show items that have the selected tag
     return data.filter(item => 
-      item.name.toLowerCase().includes(selectedCat.searchKey.toLowerCase())
+      item.tags && item.tags.some(tag => String(tag.id) === String(selectedTagId))
     );
   };
 
@@ -247,19 +320,26 @@ export default function ListScreen() {
 
       {/* DYNAMIC HORIZONTAL CATEGORY COMPONENT */}
       <View style={styles.categoryBlock}>
+        {tagsError && (
+          <View style={{ paddingLeft: 24, marginBottom: 8 }}>
+            <Text style={{ fontSize: 12, color: '#D47E13', fontFamily: 'Inter-Medium' }}>
+              Fetching tag gagal
+            </Text>
+          </View>
+        )}
         <FlatList
           horizontal
-          data={activeTab === 'Masak' ? RECIPE_CATEGORIES : INGREDIENT_CATEGORIES}
-          keyExtractor={(cat) => cat.id}
+          data={categories}
+          keyExtractor={(cat) => String(cat.id)}
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.categoryScrollPadding}
           renderItem={({ item: cat }) => {
-            const isSelected = activeCategory === cat.id;
+            const isSelected = activeCategory === String(cat.id);
             return (
               <TouchableOpacity
                 style={styles.categoryItem}
                 activeOpacity={0.7}
-                onPress={() => setActiveCategory(cat.id)}
+                onPress={() => setActiveCategory(String(cat.id))}
               >
                 <View style={[styles.categoryIconCircle, isSelected && styles.categoryIconCircleActive]}>
                   <Text style={styles.categoryEmoji}>{cat.icon}</Text>
@@ -407,6 +487,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     borderWidth: 1,
     borderColor: '#F5EAE4'
+  
   },
   emptyState: { color: '#9E5F3B', textAlign: 'center', marginTop: 8, fontFamily: 'Inter-Medium', fontSize: 13, opacity: 0.7 },
 });
