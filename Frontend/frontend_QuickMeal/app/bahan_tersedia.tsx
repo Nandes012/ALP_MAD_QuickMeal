@@ -1,9 +1,20 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, Text, View, ScrollView, TouchableOpacity, ImageBackground, StatusBar, Platform } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, TouchableOpacity, ImageBackground, StatusBar, Platform, ActivityIndicator, Linking, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_BASE_URL } from '@/constants/api';
+
+interface Location {
+  id: string;
+  location_name: string;
+  road_name?: string;
+  opening_time?: string;
+  closing_time?: string;
+  google_maps_link?: string;
+  location_picture?: string;
+}
 
 function Chip({ label }: { label: string }) {
   return (
@@ -34,6 +45,9 @@ export default function BahanTersediaScreen() {
     missingIngredients ? missingIngredients.split(',').map((item) => item.trim()).filter(Boolean) : []
   );
 
+  const [storesByIngredient, setStoresByIngredient] = useState<{ [key: string]: Location[] }>({});
+  const [loadingStores, setLoadingStores] = useState(false);
+
   useEffect(() => {
     const loadFromStorageIfNeeded = async () => {
       if (ownedIngredientList.length > 0 || recipeIngredientList.length > 0) return;
@@ -54,6 +68,71 @@ export default function BahanTersediaScreen() {
 
     loadFromStorageIfNeeded();
   }, []);
+
+  // Fetch stores for missing ingredients
+  useEffect(() => {
+    const fetchStoresForMissingIngredients = async () => {
+      if (missingIngredientList.length === 0) return;
+
+      setLoadingStores(true);
+      try {
+        // Fetch all ingredients to create name → ID mapping
+        const ingredientsResponse = await fetch(`${API_BASE_URL}/ingredients`);
+        if (!ingredientsResponse.ok) throw new Error('Failed to fetch ingredients');
+        
+        const ingredientsData = await ingredientsResponse.json();
+        const ingredientsList = ingredientsData.data || [];
+        
+        const ingredientMap: { [key: string]: string } = {};
+        ingredientsList.forEach((ing: any) => {
+          ingredientMap[ing.name?.toLowerCase().trim()] = ing.id;
+        });
+
+        // Fetch stores for each missing ingredient
+        const stores: { [key: string]: Location[] } = {};
+        
+        for (const missingIng of missingIngredientList) {
+          const lowerIng = missingIng.toLowerCase().trim();
+          const ingredientId = ingredientMap[lowerIng];
+          
+          if (ingredientId) {
+            try {
+              const storesResponse = await fetch(`${API_BASE_URL}/ingredients/${ingredientId}/locations`);
+              if (storesResponse.ok) {
+                const storesData = await storesResponse.json();
+                stores[missingIng] = storesData.data || [];
+              }
+            } catch (e) {
+              console.warn(`Failed to fetch stores for ${missingIng}:`, e);
+              stores[missingIng] = [];
+            }
+          }
+        }
+
+        setStoresByIngredient(stores);
+      } catch (e) {
+        console.error('Error fetching stores:', e);
+      } finally {
+        setLoadingStores(false);
+      }
+    };
+
+    fetchStoresForMissingIngredients();
+  }, [missingIngredientList]);
+
+  const handleOpenMaps = (mapsLink?: string) => {
+    if (mapsLink) {
+      Linking.openURL(mapsLink).catch(() => {
+        alert('Could not open maps link');
+      });
+    }
+  };
+
+  const formatTime = (time?: string) => {
+    if (!time) return '-';
+    // Assuming time format is HH:mm
+    return time;
+  };
 
   return (
     <View style={styles.container}>
@@ -124,32 +203,66 @@ export default function BahanTersediaScreen() {
 
               <View style={styles.sectionCard}>
                 <Text style={styles.sectionTitle}>Alamat beli terdekat</Text>
-                <View style={styles.storeCard}>
-                  <View style={styles.storeImagePlaceholder}>
-                    <Ionicons name="map-outline" size={24} color="#9E5F3B" />
+                {loadingStores ? (
+                  <View style={styles.loadingContainer}>
+                    <ActivityIndicator size="large" color="#9E5F3B" />
+                    <Text style={styles.loadingText}>Memuat lokasi toko...</Text>
                   </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.storeName}>Nama Toko / Pasar</Text>
-                    <Text style={styles.storeAddress}>Jalan alamat akan muncul dari fetching lokasi bahan.</Text>
-                    <Text style={styles.storeMeta}>Jam buka: 07.00 - 21.00</Text>
+                ) : Object.keys(storesByIngredient).length > 0 ? (
+                  <View>
+                    {missingIngredientList.map((ingredient) => {
+                      const stores = storesByIngredient[ingredient] || [];
+                      return (
+                        <View key={ingredient} style={styles.ingredientStoresSection}>
+                          <Text style={styles.ingredientStoreTitle}>{ingredient}</Text>
+                          {stores.length > 0 ? (
+                            stores.map((store, index) => (
+                              <TouchableOpacity 
+                                key={`${ingredient}-${store.id}-${index}`}
+                                style={styles.storeCard}
+                                activeOpacity={0.8}
+                                onPress={() => handleOpenMaps(store.google_maps_link)}
+                              >
+                                <View style={styles.storeImagePlaceholder}>
+                                  {store.location_picture ? (
+                                    <Image 
+                                      source={{ uri: store.location_picture }} 
+                                      style={styles.storeImage}
+                                      resizeMode="cover"
+                                    />
+                                  ) : (
+                                    <Ionicons name="storefront-outline" size={24} color="#9E5F3B" />
+                                  )}
+                                </View>
+                                <View style={{ flex: 1 }}>
+                                  <Text style={styles.storeName}>{store.location_name}</Text>
+                                  <Text style={styles.storeAddress}>{store.road_name || 'Alamat tidak tersedia'}</Text>
+                                  <Text style={styles.storeMeta}>
+                                    {store.opening_time && store.closing_time 
+                                      ? `Jam buka: ${formatTime(store.opening_time)} - ${formatTime(store.closing_time)}`
+                                      : 'Jam buka: Tidak tersedia'
+                                    }
+                                  </Text>
+                                  {store.google_maps_link && (
+                                    <View style={styles.mapsLinkRow}>
+                                      <Ionicons name="location" size={12} color="rgba(255,255,255,0.9)" style={{ marginRight: 4 }} />
+                                      <Text style={styles.mapsLinkText}>Buka di Google Maps</Text>
+                                    </View>
+                                  )}
+                                </View>
+                              </TouchableOpacity>
+                            ))
+                          ) : (
+                            <Text style={styles.noStoresText}>Tidak ada toko yang ditemukan untuk bahan ini</Text>
+                          )}
+                        </View>
+                      );
+                    })}
                   </View>
-                </View>
-
-                <View style={styles.storeCard}>
-                  <View style={styles.storeImagePlaceholder}>
-                    <Ionicons name="location-outline" size={24} color="#9E5F3B" />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.storeName}>Lokasi alternatif</Text>
-                    <Text style={styles.storeAddress}>Card ini akan dipakai untuk list beberapa lokasi belanja.</Text>
-                    <Text style={styles.storeMeta}>Buka peta dan rute tersedia nanti.</Text>
-                  </View>
-                </View>
+                ) : (
+                  <Text style={styles.emptyText}>Tidak ada bahan yang perlu dibeli</Text>
+                )}
               </View>
-
-              <TouchableOpacity style={styles.primaryButton} activeOpacity={0.9}>
-                <Text style={styles.primaryButtonText}>Siap untuk di-fetch</Text>
-              </TouchableOpacity>
             </ScrollView>
           </SafeAreaView>
         </View>
@@ -264,6 +377,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginRight: 12,
   },
+  storeImage: {
+    width: 54,
+    height: 54,
+    borderRadius: 16,
+  },
   storeName: { color: '#fff', fontSize: 14, fontWeight: '800' },
   storeAddress: { color: 'rgba(255,255,255,0.88)', fontSize: 12, marginTop: 4, lineHeight: 17 },
   storeMeta: { color: 'rgba(255,255,255,0.8)', fontSize: 11, marginTop: 6 },
@@ -276,4 +394,42 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   primaryButtonText: { color: '#fff', fontWeight: '800', fontSize: 14 },
+  loadingContainer: {
+    alignItems: 'center',
+    paddingVertical: 20,
+  },
+  loadingText: {
+    color: '#9E5F3B',
+    fontSize: 12,
+    marginTop: 8,
+    fontStyle: 'italic',
+  },
+  ingredientStoresSection: {
+    marginBottom: 14,
+  },
+  ingredientStoreTitle: {
+    color: '#5b2f20',
+    fontWeight: '700',
+    fontSize: 13,
+    marginBottom: 8,
+    paddingLeft: 4,
+    textTransform: 'capitalize',
+  },
+  noStoresText: {
+    color: '#9E5F3B',
+    fontSize: 12,
+    fontStyle: 'italic',
+    marginBottom: 10,
+  },
+  mapsLinkRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 6,
+  },
+  mapsLinkText: {
+    color: 'rgba(255,255,255,0.9)',
+    fontSize: 10,
+    fontWeight: '600',
+    fontStyle: 'italic',
+  },
 });
