@@ -51,10 +51,7 @@ Route::delete($ingredientDetailRoute, [IngredientController::class, 'destroy']);
 
 //routes for ingredient locations (with prices)
 Route::get('/ingredients/{ingredient_id}/ingredient-locations', [IngredientLocationController::class, 'index']);
-Route::post('/ingredients/{ingredient_id}/ingredient-locations', [IngredientLocationController::class, 'store']);
 Route::get('/ingredients/{ingredient_id}/ingredient-locations/{id_location}', [IngredientLocationController::class, 'show']);
-Route::put('/ingredients/{ingredient_id}/ingredient-locations/{id_location}', [IngredientLocationController::class, 'update']);
-Route::delete('/ingredients/{ingredient_id}/ingredient-locations/{id_location}', [IngredientLocationController::class, 'destroy']);
 
 //routes for location
 Route::get('/locations', [LocationController::class, 'index']);
