@@ -99,7 +99,7 @@ export default function BahanTersediaScreen() {
           
           if (ingredientId) {
             try {
-              const storesResponse = await fetch(`${API_BASE_URL}/ingredients/${ingredientId}/locations`);
+              const storesResponse = await fetch(`${API_BASE_URL}/ingredients/${ingredientId}/ingredient-locations`);
               if (storesResponse.ok) {
                 const storesData = await storesResponse.json();
                 stores[missingIng] = storesData.data || [];

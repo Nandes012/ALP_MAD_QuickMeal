@@ -75,7 +75,7 @@ export default function DetailBahan() {
 
     const fetchLocations = async () => {
       try {
-        const response = await fetch(`${API_BASE_URL}/ingredients/${ingredientId}/locations`);
+        const response = await fetch(`${API_BASE_URL}/ingredients/${ingredientId}/ingredient-locations`);
 
         if (!response.ok) {
           throw new Error(`API error: ${response.status}`);

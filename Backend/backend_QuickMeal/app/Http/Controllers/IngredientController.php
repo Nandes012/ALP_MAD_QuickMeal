@@ -98,38 +98,4 @@ class IngredientController extends Controller
 
         return $this->successResponse(null, 'Ingredient deleted successfully');
     }
-
-    /**
-     * GET /api/ingredients/{id}/locations
-     */
-    public function getLocations($id)
-    {
-        try {
-            $ingredient = Ingredient::find($id);
-
-            if (!$ingredient) {
-                return $this->notFoundResponse('Ingredient');
-            }
-
-            // Get locations with price per kg location from the pivot table
-            $locations = $ingredient->locations()
-                ->get()
-                ->map(function ($location) {
-                    return [
-                        'id_location' => $location->id_location,
-                        'location_name' => $location->location_name,
-                        'road_name' => $location->road_name,
-                        'location_picture' => $location->location_picture,
-                        'google_maps_link' => $location->google_maps_link,
-                        'opening_time' => $location->opening_time,
-                        'closing_time' => $location->closing_time,
-                        'price_per_kg_location' => $location->pivot->price_per_kg_location,
-                    ];
-                });
-
-            return $this->successResponse($locations, 'Locations fetched successfully');
-        } catch (\Exception $e) {
-            return $this->errorResponse('Error fetching locations', 500, ['error' => $e->getMessage()]);
-        }
-    }
 }

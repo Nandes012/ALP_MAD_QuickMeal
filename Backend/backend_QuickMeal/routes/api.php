@@ -45,8 +45,6 @@ Route::middleware('auth:sanctum')->group(function () {
 //routes for ingredients
 Route::get('/ingredients', [IngredientController::class, 'index']);
 Route::get($ingredientDetailRoute, [IngredientController::class, 'show']);
-Route::get('/ingredients/{id}/locations', [IngredientController::class, 'getLocations']);
-Route::get('/ingredients/{ingredient_id}/locations-with-prices', [IngredientLocationController::class, 'locationsWithPrices']);
 Route::post('/ingredients', [IngredientController::class, 'store']);
 Route::put($ingredientDetailRoute, [IngredientController::class, 'update']);
 Route::delete($ingredientDetailRoute, [IngredientController::class, 'destroy']);
