@@ -23,9 +23,11 @@ type Location = {
   google_maps_link?: string | null;
   opening_time?: string | null;
   closing_time?: string | null;
+  price_per_kg_location?: number | null;
   pivot?: {
     ingredient_id: string;
     id_location: string;
+    price_per_kg_location?: number | null;
     created_at?: string;
     updated_at?: string;
   };
@@ -192,23 +194,7 @@ export default function DetailBahan() {
           {/* CARD INFO BAHAN */}
           <View style={styles.infoCard}>
             <Text style={styles.infoTitle}>Info Bahan</Text>
-            
-            {/* Baris Harga (Menggunakan Harga Tertinggi) */}
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Harga / 1kg</Text>
-              <Text style={styles.infoSeparator}>:</Text>
-              <Text style={styles.infoValue}>Rp. {bahanPriceValue}</Text>
-            </View>
-
-            {/* Baris Jam Operasional */}
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Jam Buka</Text>
-              <Text style={styles.infoSeparator}>:</Text>
-              <Text style={styles.infoValue}>07.00 - 21.00 WITA</Text>
-            </View>
-
-            {/* Separator Line */}
-            <View style={{ height: 1, backgroundColor: 'rgba(255, 255, 255, 0.3)', marginVertical: 12 }} />
+        
 
             {locations.length > 0 ? (
               <View>
@@ -236,6 +222,11 @@ export default function DetailBahan() {
                       ) : (
                         <Text style={styles.locationTime}>Jam operasional tidak tersedia</Text>
                       )}
+                      {location.price_per_kg_location && (
+                        <Text style={styles.locationPrice}>
+                          Harga: Rp. {Number(location.price_per_kg_location).toLocaleString('id-ID')}/kg
+                        </Text>
+                      )}
                     </View>
                   </View>
                 ))}
@@ -244,10 +235,7 @@ export default function DetailBahan() {
               <Text style={styles.noteText}>Data lokasi belum tersedia dari backend.</Text>
             )}
           </View>
-
-          {/* FOOTER PERINGATAN */}
-          <Text style={styles.warningText}>Informasi harga, jam kerja, dan koordinat toko mengikuti data backend terbaru.</Text>
-        </ScrollView>
+       </ScrollView>
       </SafeAreaView>
 
       <CustomNavbar />
@@ -285,4 +273,5 @@ const styles = StyleSheet.create({
   locationName: { fontSize: 14, color: '#FFFFFF', fontWeight: '600' },
   locationRoad: { fontSize: 12, color: '#FFFFFF', marginTop: 2, opacity: 0.85 },
   locationTime: { fontSize: 12, color: '#FFFFFF', marginTop: 4, opacity: 0.9 },
+  locationPrice: { fontSize: 13, color: '#ffffff', marginTop: 6, fontWeight: '600' },
 });

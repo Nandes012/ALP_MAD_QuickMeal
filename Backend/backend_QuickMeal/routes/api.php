@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\RecipeController;
 use App\Http\Controllers\IngredientController;
+use App\Http\Controllers\IngredientLocationController;
 use App\Http\Controllers\LocationController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\RecentViewedRecipeController;
@@ -45,9 +46,17 @@ Route::middleware('auth:sanctum')->group(function () {
 Route::get('/ingredients', [IngredientController::class, 'index']);
 Route::get($ingredientDetailRoute, [IngredientController::class, 'show']);
 Route::get('/ingredients/{id}/locations', [IngredientController::class, 'getLocations']);
+Route::get('/ingredients/{ingredient_id}/locations-with-prices', [IngredientLocationController::class, 'locationsWithPrices']);
 Route::post('/ingredients', [IngredientController::class, 'store']);
 Route::put($ingredientDetailRoute, [IngredientController::class, 'update']);
 Route::delete($ingredientDetailRoute, [IngredientController::class, 'destroy']);
+
+//routes for ingredient locations (with prices)
+Route::get('/ingredients/{ingredient_id}/ingredient-locations', [IngredientLocationController::class, 'index']);
+Route::post('/ingredients/{ingredient_id}/ingredient-locations', [IngredientLocationController::class, 'store']);
+Route::get('/ingredients/{ingredient_id}/ingredient-locations/{id_location}', [IngredientLocationController::class, 'show']);
+Route::put('/ingredients/{ingredient_id}/ingredient-locations/{id_location}', [IngredientLocationController::class, 'update']);
+Route::delete('/ingredients/{ingredient_id}/ingredient-locations/{id_location}', [IngredientLocationController::class, 'destroy']);
 
 //routes for location
 Route::get('/locations', [LocationController::class, 'index']);
