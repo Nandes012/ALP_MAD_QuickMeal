@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Recipe extends Model
 {
@@ -34,8 +35,8 @@ class Recipe extends Model
         return $this->hasMany(RecentViewedRecipe::class);
     }
 
-    public function tags(): HasMany
+    public function tags()
     {
-        return $this->hasMany(RecipeIngredient::class);
+        return $this->belongsToMany(tag::class, 'recipe_tag', 'recipe_id', 'tag_id');
     }
 }

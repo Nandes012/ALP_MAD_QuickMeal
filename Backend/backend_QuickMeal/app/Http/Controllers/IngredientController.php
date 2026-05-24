@@ -15,10 +15,31 @@ class IngredientController extends Controller
      */
     public function index(Request $request)
     {
-        [$ingredients, $paginator] = $this->paginateOrLimit(Ingredient::query(), $request);
+        [$ingredients, $paginator] = $this->paginateOrLimit(Ingredient::with('tags'), $request);
+
+        // Map ingredients to include tags
+        $ingredientsMapped = $ingredients->map(function ($ingredient) {
+            return [
+                'id' => $ingredient->id,
+                'name' => $ingredient->name,
+                'ingredient_picture' => $ingredient->ingredient_picture,
+                'ingredient_video' => $ingredient->ingredient_video,
+                'price_per_kg' => $ingredient->price_per_kg,
+                'tags' => $ingredient->tags->map(function ($tag) {
+                    return [
+                        'id' => $tag->id,
+                        'name' => $tag->name,
+                        'icon' => $tag->icon,
+                        'type' => $tag->type,
+                    ];
+                })->toArray(),
+                'created_at' => $ingredient->created_at,
+                'updated_at' => $ingredient->updated_at,
+            ];
+        });
 
         return $this->successResponse(
-            $ingredients,
+            $ingredientsMapped,
             'Ingredients fetched successfully',
             200,
             $paginator ? ['meta' => $this->paginationMeta($paginator)] : []
@@ -51,13 +72,31 @@ class IngredientController extends Controller
      */
     public function show($id)
     {
-        $ingredient = Ingredient::with('locations')->find($id);
+        $ingredient = Ingredient::with('locations', 'tags')->find($id);
 
         if (!$ingredient) {
             return $this->notFoundResponse('Ingredient');
         }
 
-        return $this->successResponse($ingredient, 'Ingredient fetched successfully');
+        $ingredientData = [
+            'id' => $ingredient->id,
+            'name' => $ingredient->name,
+            'ingredient_picture' => $ingredient->ingredient_picture,
+            'ingredient_video' => $ingredient->ingredient_video,
+            'price_per_kg' => $ingredient->price_per_kg,
+            'tags' => $ingredient->tags->map(function ($tag) {
+                return [
+                    'id' => $tag->id,
+                    'name' => $tag->name,
+                    'icon' => $tag->icon,
+                    'type' => $tag->type,
+                ];
+            })->toArray(),
+            'created_at' => $ingredient->created_at,
+            'updated_at' => $ingredient->updated_at,
+        ];
+
+        return $this->successResponse($ingredientData, 'Ingredient fetched successfully');
     }
 
     /**

@@ -11,6 +11,18 @@ class RecipeController extends Controller
     {
         $totalIngredientPrice = (float) ($recipe->ingredients->sum('price_estimate') ?? 0);
 
+        $tags = [];
+        if ($recipe->relationLoaded('tags')) {
+            $tags = $recipe->tags->map(function ($tag) {
+                return [
+                    'id' => $tag->id,
+                    'name' => $tag->name,
+                    'icon' => $tag->icon,
+                    'type' => $tag->type,
+                ];
+            })->toArray();
+        }
+
         return [
             'id' => (string) $recipe->id,
             'title' => $recipe->name,
@@ -20,6 +32,7 @@ class RecipeController extends Controller
             'cookingTime' => $recipe->cookingTime,
             'difficulty' => $recipe->difficulty,
             'totalIngredientPrice' => $totalIngredientPrice,
+            'tags' => $tags,
         ];
     }
 
@@ -47,7 +60,7 @@ class RecipeController extends Controller
 
             // Use inRandomOrder() which delegates randomness to the DB and
             // applies a LIMIT so only the needed rows are fetched.
-            $recipes = Recipe::with('ingredients')
+            $recipes = Recipe::with('ingredients', 'tags')
                 ->inRandomOrder()
                 ->limit($limit)
                 ->get()
@@ -85,7 +98,7 @@ class RecipeController extends Controller
 
             // Start building the query and only fetch what's necessary. We
             // support optional pagination via `page` and `perPage` query params.
-            $query = Recipe::with('ingredients.ingredient');
+            $query = Recipe::with('ingredients.ingredient', 'tags');
 
             if ($time) {
                 $query->where('cookingTime', '<=', (int)$time);

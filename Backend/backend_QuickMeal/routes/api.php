@@ -8,6 +8,7 @@ use App\Http\Controllers\IngredientLocationController;
 use App\Http\Controllers\LocationController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\RecentViewedRecipeController;
+use App\Http\Controllers\TagController;
 
 $ingredientDetailRoute = '/ingredients/' . '{id}';
 $locationDetailRoute = '/locations/' . '{id}';
@@ -52,6 +53,9 @@ Route::delete($ingredientDetailRoute, [IngredientController::class, 'destroy']);
 //routes for ingredient locations (with prices)
 Route::get('/ingredients/{ingredient_id}/ingredient-locations', [IngredientLocationController::class, 'index']);
 Route::get('/ingredients/{ingredient_id}/ingredient-locations/{id_location}', [IngredientLocationController::class, 'show']);
+
+//routes for tags
+Route::get('/tags', [TagController::class, 'index']);
 
 //routes for location
 Route::get('/locations', [LocationController::class, 'index']);

@@ -31,8 +31,8 @@ class Ingredient extends Model
          ->withTimestamps();
     }
 
-    public function tags(): HasMany
+    public function tags()
     {
-        return $this->hasMany(RecipeIngredient::class);
+        return $this->belongsToMany(tag::class, 'ingredient_tag', 'ingredient_id', 'tag_id');
     }
 }
