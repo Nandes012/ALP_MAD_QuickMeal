@@ -99,7 +99,6 @@ class IngredientLocationController extends Controller
                     'google_maps_link' => $location->google_maps_link,
                     'opening_time' => $location->opening_time,
                     'closing_time' => $location->closing_time,
-                    'price_per_kg_location' => $location->pivot->price_per_kg_location,
                 ];
             });
 
