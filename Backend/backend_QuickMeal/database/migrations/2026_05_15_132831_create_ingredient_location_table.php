@@ -19,6 +19,8 @@ return new class extends Migration
 
             $table->unsignedBigInteger('id_location');
 
+            $table->integer('price_per_kg_location')->nullable();
+
             $table->foreign('ingredient_id')
                 ->references('id')
                 ->on('ingredients')
@@ -31,7 +33,7 @@ return new class extends Migration
 
             $table->timestamps();
         });
-    }
+    }   
 
     /**
      * GET /api/auth/me
