@@ -27,7 +27,8 @@ class Ingredient extends Model
             'ingredient_location',
             'ingredient_id',
             'id_location'
-        )->withTimestamps();
+        )->withPivot('price_per_kg_location')
+         ->withTimestamps();
     }
 
     public function tags(): HasMany

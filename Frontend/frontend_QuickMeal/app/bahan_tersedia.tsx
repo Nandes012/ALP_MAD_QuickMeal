@@ -8,12 +8,14 @@ import { API_BASE_URL } from '@/constants/api';
 
 interface Location {
   id: string;
+  id_location: string;
   location_name: string;
   road_name?: string;
   opening_time?: string;
   closing_time?: string;
   google_maps_link?: string;
   location_picture?: string;
+  price_per_kg_location?: number | null;
 }
 
 function Chip({ label }: { label: string }) {
@@ -97,7 +99,7 @@ export default function BahanTersediaScreen() {
           
           if (ingredientId) {
             try {
-              const storesResponse = await fetch(`${API_BASE_URL}/ingredients/${ingredientId}/locations`);
+              const storesResponse = await fetch(`${API_BASE_URL}/ingredients/${ingredientId}/ingredient-locations`);
               if (storesResponse.ok) {
                 const storesData = await storesResponse.json();
                 stores[missingIng] = storesData.data || [];
@@ -243,6 +245,11 @@ export default function BahanTersediaScreen() {
                                       : 'Jam buka: Tidak tersedia'
                                     }
                                   </Text>
+                                  {store.price_per_kg_location && (
+                                    <Text style={styles.storePrice}>
+                                      Harga: Rp. {Number(store.price_per_kg_location).toLocaleString('id-ID')}/kg
+                                    </Text>
+                                  )}
                                   {store.google_maps_link && (
                                     <View style={styles.mapsLinkRow}>
                                       <Ionicons name="location" size={12} color="rgba(255,255,255,0.9)" style={{ marginRight: 4 }} />
@@ -420,6 +427,12 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontStyle: 'italic',
     marginBottom: 10,
+  },
+  storePrice: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontWeight: '600',
+    marginTop: 6,
   },
   mapsLinkRow: {
     flexDirection: 'row',

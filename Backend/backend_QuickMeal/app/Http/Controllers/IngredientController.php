@@ -98,23 +98,4 @@ class IngredientController extends Controller
 
         return $this->successResponse(null, 'Ingredient deleted successfully');
     }
-
-    /**
-     * GET /api/ingredients/{id}/locations
-     */
-    public function getLocations($id)
-    {
-        try {
-            $ingredient = Ingredient::with('locations')->find($id);
-
-            if (!$ingredient) {
-                return $this->notFoundResponse('Ingredient');
-            }
-
-            return $this->successResponse($ingredient->locations, 'Locations fetched successfully');
-        } catch (\Exception $e) {
-            return $this->errorResponse('Error fetching locations', 500, ['error' => $e->getMessage()]);
-        }
-    }
 }
-
