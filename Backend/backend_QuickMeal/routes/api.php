@@ -56,7 +56,6 @@ Route::get('/ingredients/{ingredient_id}/ingredient-locations/{id_location}', [I
 
 //routes for tags
 Route::get('/tags', [TagController::class, 'index']);
-Route::get('/tags/{id}', [TagController::class, 'show']);
 
 //routes for location
 Route::get('/locations', [LocationController::class, 'index']);

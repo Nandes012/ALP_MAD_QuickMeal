@@ -35,26 +35,4 @@ class TagController extends Controller
 
         return $this->successResponse($tags, 'Tags fetched successfully');
     }
-
-    /**
-     * GET /api/tags/{id}
-     * Get a specific tag by ID
-     */
-    public function show($id)
-    {
-        $tag = tag::find($id);
-
-        if (!$tag) {
-            return $this->notFoundResponse('Tag');
-        }
-
-        $tagData = [
-            'id' => $tag->id,
-            'name' => $tag->name,
-            'icon' => $tag->icon,
-            'type' => $tag->type,
-        ];
-
-        return $this->successResponse($tagData, 'Tag fetched successfully');
-    }
 }
