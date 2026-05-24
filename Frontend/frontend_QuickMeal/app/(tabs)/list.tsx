@@ -10,19 +10,19 @@ import { API_BASE_URL, getApiHost } from '@/constants/api';
 // Import CustomNavbar resmi
 import CustomNavbar from '../../components/CustomNavbar';
 
-interface FoodItem {
-  id: string;
-  name: string;
-  price: string;
-  imageUri: string;
-  tags?: Array<{ id: number; name: string; icon: string; type: string }>;
-}
-
 interface Tag {
   id: string | number;
   name: string;
   icon: string;
   type: string;
+}
+
+interface FoodItem {
+  id: string;
+  name: string;
+  price: string;
+  imageUri: string;
+  tags?: Tag[];
 }
 
 // Fallback kategori jika tag gagal di-fetch
@@ -330,7 +330,7 @@ export default function ListScreen() {
         <FlatList
           horizontal
           data={categories}
-          keyExtractor={(cat) => String(cat.id)}
+          keyExtractor={(cat: Tag) => String(cat.id)}
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.categoryScrollPadding}
           renderItem={({ item: cat }) => {
@@ -487,7 +487,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     borderWidth: 1,
     borderColor: '#F5EAE4'
-  
   },
+  
   emptyState: { color: '#9E5F3B', textAlign: 'center', marginTop: 8, fontFamily: 'Inter-Medium', fontSize: 13, opacity: 0.7 },
 });
