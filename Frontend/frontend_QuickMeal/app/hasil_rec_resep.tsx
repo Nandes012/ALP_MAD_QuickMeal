@@ -178,7 +178,17 @@ export default function HasilRecResepScreen() {
             
             {(time || budgetMin || budgetMax || ingredients) && (
               <View style={styles.summaryCard}>
-                <Text style={styles.summaryTitle}>Input dari form</Text>
+                <View style={styles.summaryHeaderRow}>
+                  <Text style={styles.summaryTitle}>Input dari form</Text>
+                  <TouchableOpacity
+                    style={styles.summaryEditButton}
+                    onPress={() => router.push({ pathname: '/from_resep', params: { time: time || '', budgetMin: budgetMin || '', budgetMax: budgetMax || '', ingredients: ingredients || '' } })}
+                    activeOpacity={0.8}
+                  >
+                    <Ionicons name="create-outline" size={14} color="#FFF" style={{ marginRight: 6 }} />
+                    <Text style={styles.summaryEditText}>Edit</Text>
+                  </TouchableOpacity>
+                </View>
 
                 <View style={styles.summaryGrid}>
                   <View style={styles.summaryItem}>
@@ -304,6 +314,26 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255, 255, 255, 0.25)',
     borderRadius: 16,
     padding: 12,
+  },
+  summaryHeaderRow: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  summaryEditButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 12,
+  },
+  summaryEditText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '700',
   },
   summaryTitle: {
     color: '#FFF8EF',
