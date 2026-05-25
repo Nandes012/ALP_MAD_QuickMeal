@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useQuery } from '@tanstack/react-query';
 import * as ScreenOrientation from 'expo-screen-orientation';
 import { API_BASE_URL } from '@/constants/api';
 import { useRecipeView } from '@/hooks/useRecipeView';
@@ -71,7 +72,6 @@ export default function DetailResepScreen() {
   } | null>(null);
 
   const [recipe, setRecipe] = useState<RecipeDetail | null>(null);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showIngredients, setShowIngredients] = useState(true);
   const [showTools, setShowTools] = useState(true);
@@ -84,76 +84,82 @@ export default function DetailResepScreen() {
     player.loop = false;
   });
 
+  /*
+   * =========================
+   * RECIPE DETAIL QUERY
+   * =========================
+   */
+  const {
+    data: queryRecipe,
+    isLoading: loading,
+    isError: queryHasError,
+  } = useQuery({
+    queryKey: ['recipeDetail', recipeId],
+    queryFn: async () => {
+      if (!recipeId) throw new Error('Recipe ID not provided');
+      const response = await fetch(`${API_BASE_URL}/recipes/${recipeId}`);
+      if (!response.ok) throw new Error(`API error: ${response.status}`);
+      const result = await response.json();
+      if (result?.success && result.data) return result.data;
+      throw new Error('Invalid response from server');
+    },
+    staleTime: 1000 * 60 * 10,
+    gcTime: 1000 * 60 * 30,
+    enabled: !!recipeId,
+  });
+
   useEffect(() => {
-    const fetchRecipeDetail = async () => {
+    if (queryRecipe) {
+      setRecipe(queryRecipe);
+      setError(null);
+    } else if (queryHasError) {
+      setError('Failed to fetch recipe');
+      setRecipe(null);
+    }
+  }, [queryRecipe, queryHasError]);
+
+  useEffect(() => {
+    if (recipe) {
+      saveRecipeView(recipeId);
+
       try {
-        if (!recipeId) {
-          setError('Recipe ID not provided');
-          setLoading(false);
-          return;
-        }
+        const recipeIngredients = Array.isArray(recipe.ingredients)
+          ? recipe.ingredients.map((ing: any) => (ing.ingredient_name || ing.name || '').toString().toLowerCase().trim()).filter(Boolean)
+          : [];
 
-        const response = await fetch(`${API_BASE_URL}/recipes/${recipeId}`);
+        AsyncStorage.getItem('owned_ingredients').then(storedOwned => {
+          const ownedRaw = routeIngredients || storedOwned || '';
+          const ownedList = ownedRaw
+            ? ownedRaw.split(',').map((s) => s.trim()).filter(Boolean).map((s) => s.toLowerCase())
+            : [];
 
-        if (!response.ok) {
-          throw new Error(`API error: ${response.status}`);
-        }
+          const missing = recipeIngredients.filter((name: string) => !ownedList.includes(name));
 
-        const result = await response.json();
+          const savePayload = {
+            recipeId: recipeId,
+            recipeName: recipe.title || fallbackName,
+            ownedIngredients: ownedList,
+            recipeIngredients: recipeIngredients,
+            missingIngredients: missing,
+            computedAt: new Date().toISOString(),
+          };
 
-        if (result?.success && result.data) {
-          setRecipe(result.data);
-          setError(null);
-          await saveRecipeView(recipeId);
-
-          try {
-            const recipeIngredients = Array.isArray(result.data.ingredients)
-              ? result.data.ingredients.map((ing: any) => (ing.ingredient_name || ing.name || '').toString().toLowerCase().trim()).filter(Boolean)
-              : [];
-
-            const storedOwned = await AsyncStorage.getItem('owned_ingredients');
-            const ownedRaw = routeIngredients || storedOwned || '';
-            const ownedList = ownedRaw
-              ? ownedRaw.split(',').map((s) => s.trim()).filter(Boolean).map((s) => s.toLowerCase())
-              : [];
-
-            const missing = recipeIngredients.filter((name: string) => !ownedList.includes(name));
-
-            const savePayload = {
-              recipeId: recipeId,
-              recipeName: result.data.title || fallbackName,
-              ownedIngredients: ownedList,
-              recipeIngredients: recipeIngredients,
-              missingIngredients: missing,
-              computedAt: new Date().toISOString(),
-            };
-
-            await AsyncStorage.setItem(`missing_for_recipe_${recipeId}`, JSON.stringify(savePayload));
-            await AsyncStorage.setItem('last_missing_ingredients', JSON.stringify(savePayload));
-            
-            setAvailabilityParams({
-              recipeId,
-              recipeName: result.data.title || fallbackName,
-              ingredients: ownedList.join(','),
-              recipeIngredients: recipeIngredients.join(','),
-              missingIngredients: missing.join(','),
-            });
-          } catch (e) {
-            console.warn('Failed to compute/save missing ingredients', e);
-          }
-        } else {
-          setError('Invalid response from server');
-        }
-      } catch (err) {
-        console.error('Error fetching recipe detail:', err);
-        setError(err instanceof Error ? err.message : 'Failed to fetch recipe');
-      } finally {
-        setLoading(false);
+          AsyncStorage.setItem(`missing_for_recipe_${recipeId}`, JSON.stringify(savePayload));
+          AsyncStorage.setItem('last_missing_ingredients', JSON.stringify(savePayload));
+          
+          setAvailabilityParams({
+            recipeId,
+            recipeName: recipe.title || fallbackName,
+            ingredients: ownedList.join(','),
+            recipeIngredients: recipeIngredients.join(','),
+            missingIngredients: missing.join(','),
+          });
+        });
+      } catch (e) {
+        console.warn('Failed to compute/save missing ingredients', e);
       }
-    };
-
-    fetchRecipeDetail();
-  }, [recipeId, saveRecipeView]);
+    }
+  }, [recipe, recipeId, fallbackName, routeIngredients, saveRecipeView]);
 
   const handlePlayVideo = async () => {
     if (!recipe?.video) {

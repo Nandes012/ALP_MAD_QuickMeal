@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useQuery } from '@tanstack/react-query';
 import { API_BASE_URL } from '@/constants/api';
 
 interface Location {
@@ -48,7 +49,79 @@ export default function BahanTersediaScreen() {
   );
 
   const [storesByIngredient, setStoresByIngredient] = useState<{ [key: string]: Location[] }>({});
-  const [loadingStores, setLoadingStores] = useState(false);
+
+  /*
+   * =========================
+   * ALL INGREDIENTS QUERY
+   * =========================
+   */
+  const {
+    data: ingredientsList = [],
+  } = useQuery({
+    queryKey: ['allIngredients'],
+    queryFn: async () => {
+      const response = await fetch(`${API_BASE_URL}/ingredients`);
+      if (!response.ok) throw new Error('Failed to fetch ingredients');
+      const data = await response.json();
+      return data.data || [];
+    },
+    staleTime: 1000 * 60 * 30,
+    gcTime: 1000 * 60 * 60,
+  });
+
+  /*
+   * =========================
+   * MISSING INGREDIENT STORES QUERY
+   * =========================
+   */
+  const {
+    data: storesData = {},
+    isLoading: loadingStores,
+  } = useQuery({
+    queryKey: ['missingIngredientStores', missingIngredientList],
+    queryFn: async () => {
+      if (missingIngredientList.length === 0) return {};
+
+      // Create name → ID mapping
+      const ingredientMap: { [key: string]: string } = {};
+      ingredientsList.forEach((ing: any) => {
+        ingredientMap[ing.name?.toLowerCase().trim()] = ing.id;
+      });
+
+      // Fetch stores for each missing ingredient
+      const stores: { [key: string]: Location[] } = {};
+      
+      for (const missingIng of missingIngredientList) {
+        const lowerIng = missingIng.toLowerCase().trim();
+        const ingredientId = ingredientMap[lowerIng];
+        
+        if (ingredientId) {
+          try {
+            const storesResponse = await fetch(`${API_BASE_URL}/ingredients/${ingredientId}/ingredient-locations`);
+            if (storesResponse.ok) {
+              const storesData = await storesResponse.json();
+              stores[missingIng] = storesData.data || [];
+            }
+          } catch (e) {
+            console.warn(`Failed to fetch stores for ${missingIng}:`, e);
+            stores[missingIng] = [];
+          }
+        }
+      }
+
+      return stores;
+    },
+    staleTime: 1000 * 60 * 15,
+    gcTime: 1000 * 60 * 45,
+    enabled: missingIngredientList.length > 0 && ingredientsList.length > 0,
+  });
+
+  // Update local state when query data changes
+  useEffect(() => {
+    if (storesData && Object.keys(storesData).length > 0) {
+      setStoresByIngredient(storesData as { [key: string]: Location[] });
+    }
+  }, [storesData]);
 
   useEffect(() => {
     const loadFromStorageIfNeeded = async () => {
@@ -69,58 +142,7 @@ export default function BahanTersediaScreen() {
     };
 
     loadFromStorageIfNeeded();
-  }, []);
-
-  // Fetch stores for missing ingredients
-  useEffect(() => {
-    const fetchStoresForMissingIngredients = async () => {
-      if (missingIngredientList.length === 0) return;
-
-      setLoadingStores(true);
-      try {
-        // Fetch all ingredients to create name → ID mapping
-        const ingredientsResponse = await fetch(`${API_BASE_URL}/ingredients`);
-        if (!ingredientsResponse.ok) throw new Error('Failed to fetch ingredients');
-        
-        const ingredientsData = await ingredientsResponse.json();
-        const ingredientsList = ingredientsData.data || [];
-        
-        const ingredientMap: { [key: string]: string } = {};
-        ingredientsList.forEach((ing: any) => {
-          ingredientMap[ing.name?.toLowerCase().trim()] = ing.id;
-        });
-
-        // Fetch stores for each missing ingredient
-        const stores: { [key: string]: Location[] } = {};
-        
-        for (const missingIng of missingIngredientList) {
-          const lowerIng = missingIng.toLowerCase().trim();
-          const ingredientId = ingredientMap[lowerIng];
-          
-          if (ingredientId) {
-            try {
-              const storesResponse = await fetch(`${API_BASE_URL}/ingredients/${ingredientId}/ingredient-locations`);
-              if (storesResponse.ok) {
-                const storesData = await storesResponse.json();
-                stores[missingIng] = storesData.data || [];
-              }
-            } catch (e) {
-              console.warn(`Failed to fetch stores for ${missingIng}:`, e);
-              stores[missingIng] = [];
-            }
-          }
-        }
-
-        setStoresByIngredient(stores);
-      } catch (e) {
-        console.error('Error fetching stores:', e);
-      } finally {
-        setLoadingStores(false);
-      }
-    };
-
-    fetchStoresForMissingIngredients();
-  }, [missingIngredientList]);
+  }, [ownedIngredientList, recipeIngredientList]);
 
   const handleOpenMaps = (mapsLink?: string) => {
     if (mapsLink) {

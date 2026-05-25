@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useQuery } from '@tanstack/react-query';
 import CustomNavbar from '../../components/CustomNavbar';
 import { useFonts, Langar_400Regular } from '@expo-google-fonts/langar';
 import { API_BASE_URL, getApiHost } from '@/constants/api';
@@ -19,10 +20,6 @@ interface RecipeItem {
 
 export default function HomeScreen() {
   const router = useRouter();
-  const [recommendedRecipes, setRecommendedRecipes] = useState<RecipeItem[]>([]);
-  const [recentRecipes, setRecentRecipes] = useState<RecipeItem[]>([]);
-  const [recommendationsLoading, setRecommendationsLoading] = useState(true);
-  const [recentLoading, setRecentLoading] = useState(true);
   const [profilePicture, setProfilePicture] = useState<string>('https://via.placeholder.com/150');
   const { saveRecipeView, saving } = useRecipeView();
 
@@ -47,13 +44,14 @@ export default function HomeScreen() {
   // ==========================================
   // LOGIKA DATA & FETCHING (ASLI TIDAK BERUBAH)
   // ==========================================
-  const fetchRecommendedRecipes = useCallback(async () => {
-    try {
-      setRecommendationsLoading(true);
+  const {
+    data: recommendedRecipes = [],
+    isLoading: recommendationsLoading,
+  } = useQuery({
+    queryKey: ['recommendedRecipes'],
+    queryFn: async () => {
       const response = await fetch(`${API_BASE_URL}/recipes`);
-
       if (!response.ok) throw new Error(`API error: ${response.status}`);
-
       const result = await response.json();
       if (result?.success && Array.isArray(result.data)) {
         const mappedRecipes = result.data.map((item: any) => ({
@@ -62,17 +60,47 @@ export default function HomeScreen() {
           desc: item.subtitle || item.description || 'Rekomendasi untuk kamu hari ini',
           image: item.image || item.imageUrl || 'https://via.placeholder.com/500',
         }));
-        setRecommendedRecipes(mappedRecipes.slice(0, 4));
-      } else {
-        setRecommendedRecipes([]);
+        return mappedRecipes.slice(0, 4);
       }
-    } catch (error) {
-      console.error('Failed to fetch recommended recipes:', error);
-      setRecommendedRecipes([]);
-    } finally {
-      setRecommendationsLoading(false);
-    }
-  }, []);
+      return [];
+    },
+    staleTime: 1000 * 60 * 10,
+    gcTime: 1000 * 60 * 30,
+  });
+
+  const {
+    data: recentRecipes = [],
+    isLoading: recentLoading,
+    refetch: refetchRecent,
+  } = useQuery({
+    queryKey: ['recentRecipes'],
+    queryFn: async () => {
+      const token = await AsyncStorage.getItem('auth_token');
+      if (!token) return [];
+      const response = await fetch(`${API_BASE_URL}/recent-viewed-recipes`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+      if (!response.ok) throw new Error(`API error: ${response.status}`);
+      const result = await response.json();
+      if (Array.isArray(result?.data)) {
+        const mappedRecipes = result.data.map((item: any) => ({
+          id: String(item.recipe?.id || item.recipe_id || item.id),
+          name: item.recipe?.title || item.recipe?.name || item.title || item.name || 'Resep',
+          desc: item.recipe?.subtitle || item.recipe?.description || item.subtitle || item.description || 'Resep yang baru dilihat',
+          image: item.recipe?.image || item.recipe?.imageUrl || item.image || item.imageUrl || 'https://via.placeholder.com/500',
+        }));
+        return Array.from(new Map<string, RecipeItem>(mappedRecipes.map((recipe: RecipeItem) => [recipe.id, recipe])).values());
+      }
+      return [];
+    },
+    staleTime: 1000 * 60 * 5,
+    gcTime: 1000 * 60 * 20,
+  });
 
   const fetchProfilePicture = useCallback(async () => {
     try {
@@ -100,58 +128,11 @@ export default function HomeScreen() {
     }
   }, []);
 
-  const fetchRecentRecipes = useCallback(async () => {
-    try {
-      setRecentLoading(true);
-      const token = await AsyncStorage.getItem('auth_token');
-      if (!token) {
-        setRecentRecipes([]);
-        setRecentLoading(false);
-        return;
-      }
-
-      const response = await fetch(`${API_BASE_URL}/recent-viewed-recipes`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) throw new Error(`API error: ${response.status}`);
-
-      const result = await response.json();
-      if (Array.isArray(result?.data)) {
-        const mappedRecipes = result.data.map((item: any) => ({
-          id: String(item.recipe?.id || item.recipe_id || item.id),
-          name: item.recipe?.title || item.recipe?.name || item.title || item.name || 'Resep',
-          desc: item.recipe?.subtitle || item.recipe?.description || item.subtitle || item.description || 'Resep yang baru dilihat',
-          image: item.recipe?.image || item.recipe?.imageUrl || item.image || item.imageUrl || 'https://via.placeholder.com/500',
-        }));
-
-        const uniqueRecipes = Array.from(new Map<string, RecipeItem>(mappedRecipes.map((recipe: RecipeItem) => [recipe.id, recipe])).values());
-        setRecentRecipes(uniqueRecipes);
-      } else {
-        setRecentRecipes([]);
-      }
-    } catch (error) {
-      console.error('Failed to fetch recent recipes:', error);
-      setRecentRecipes([]);
-    } finally {
-      setRecentLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchRecommendedRecipes();
-  }, [fetchRecommendedRecipes, fetchRecentRecipes]);
-
   useFocusEffect(
     useCallback(() => {
-      fetchRecentRecipes();
+      refetchRecent();
       fetchProfilePicture();
-    }, [fetchRecentRecipes, fetchProfilePicture])
+    }, [refetchRecent, fetchProfilePicture])
   );
 
   if (!fontsLoaded) return null;
