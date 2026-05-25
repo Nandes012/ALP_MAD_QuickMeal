@@ -5,6 +5,7 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { useFonts, Langar_400Regular } from '@expo-google-fonts/langar';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { API_BASE_URL, getApiHost } from '@/constants/api';
 
 // Import CustomNavbar resmi
@@ -116,20 +117,49 @@ async function fetchList(activeTab: 'Masak' | 'Bahan') {
 
 export default function ListScreen() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<'Masak' | 'Bahan'>('Masak');
-  const [data, setData] = useState<FoodItem[]>([]);
-  const [loading, setLoading] = useState(true);
   const [profilePicture, setProfilePicture] = useState<string>('https://via.placeholder.com/150');
   const [activeCategory, setActiveCategory] = useState('all');
-  const [categories, setCategories] = useState<any[]>([]);
-  const [categoriesLoading, setCategoriesLoading] = useState(false);
-  const [tagsError, setTagsError] = useState(false);
 
   const [fontsLoaded] = useFonts({
     'Inter-Regular': Langar_400Regular,
     'Inter-Medium': Langar_400Regular,
     'Inter-SemiBold': Langar_400Regular,
     'Inter-Bold': Langar_400Regular,
+  });
+
+  /*
+   * =========================
+   * LIST QUERY (RECIPES/INGREDIENTS)
+   * =========================
+   */
+  const {
+    data: data = [],
+    isLoading: loading,
+    refetch: refetchList,
+  } = useQuery({
+    queryKey: ['list', activeTab],
+    queryFn: () => fetchList(activeTab),
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    gcTime: 1000 * 60 * 30, // 30 minutes (formerly cacheTime)
+  });
+
+  /*
+   * =========================
+   * TAG QUERY (CATEGORIES)
+   * =========================
+   */
+  const {
+    data: categories = [],
+    isLoading: categoriesLoading,
+    isError: tagsError,
+  } = useQuery({
+    queryKey: ['tags', activeTab],
+    queryFn: () =>
+      fetchTags(activeTab === 'Masak' ? 'resep' : 'bahan'),
+    staleTime: 1000 * 60 * 30, // 30 minutes
+    gcTime: 1000 * 60 * 60, // 60 minutes
   });
 
   const fetchProfilePicture = useCallback(async () => {
@@ -158,68 +188,21 @@ export default function ListScreen() {
     }
   }, []);
 
-  useEffect(() => {
-    let mounted = true;
-
-    const loadList = async () => {
-      setLoading(true);
-      setActiveCategory('all');
-
-      try {
-        const list = await fetchList(activeTab);
-        if (mounted) {
-          setData(list);
-        }
-      } catch (error) {
-        console.error('Failed to load list:', error);
-        if (mounted) {
-          setData([]);
-        }
-      } finally {
-        if (mounted) {
-          setLoading(false);
-        }
-      }
-    };
-
-    const loadTags = async () => {
-      setCategoriesLoading(true);
-      setTagsError(false);
-
-      try {
-        const tagType = activeTab === 'Masak' ? 'resep' : 'bahan';
-        const fetchedTags = await fetchTags(tagType as 'resep' | 'bahan');
-        if (mounted) {
-          setCategories(fetchedTags);
-        }
-      } catch (error) {
-        console.error('Failed to load tags:', error);
-        if (mounted) {
-          setTagsError(true);
-          // Use fallback categories
-          const fallback = activeTab === 'Masak' ? FALLBACK_RECIPE_CATEGORIES : FALLBACK_INGREDIENT_CATEGORIES;
-          setCategories(fallback);
-        }
-      } finally {
-        if (mounted) {
-          setCategoriesLoading(false);
-        }
-      }
-    };
-
-    loadList();
-    loadTags();
-
-    return () => {
-      mounted = false;
-    };
-  }, [activeTab]);
-
   useFocusEffect(
     useCallback(() => {
       fetchProfilePicture();
-    }, [fetchProfilePicture])
+      refetchList();
+    }, [fetchProfilePicture, refetchList])
   );
+
+  /*
+   * =========================
+   * RESET CATEGORY ON TAB CHANGE
+   * =========================
+   */
+  useEffect(() => {
+    setActiveCategory('all');
+  }, [activeTab]);
 
   const handleItemPress = (item: FoodItem) => {
     const cleanName = item.name.replace(/\s+/g, ' ').trim();
@@ -236,6 +219,18 @@ export default function ListScreen() {
       });
     }
   };
+
+  /*
+   * =========================
+   * CATEGORY FALLBACK
+   * =========================
+   */
+  const displayedCategories =
+    categories.length > 0
+      ? categories
+      : activeTab === 'Masak'
+      ? FALLBACK_RECIPE_CATEGORIES
+      : FALLBACK_INGREDIENT_CATEGORIES;
 
   const getFilteredData = () => {
     if (activeCategory === 'all') return data;
@@ -323,13 +318,13 @@ export default function ListScreen() {
         {tagsError && (
           <View style={{ paddingLeft: 24, marginBottom: 8 }}>
             <Text style={{ fontSize: 12, color: '#D47E13', fontFamily: 'Inter-Medium' }}>
-              Fetching tag gagal
+              Fetching tag gagal, menggunakan kategori default
             </Text>
           </View>
         )}
         <FlatList
           horizontal
-          data={categories}
+          data={displayedCategories}
           keyExtractor={(cat: Tag) => String(cat.id)}
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.categoryScrollPadding}

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { StyleSheet, Text, View, Image, TouchableOpacity, ScrollView, Platform, StatusBar, ActivityIndicator, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useQuery } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons'; 
 import { API_BASE_URL } from '@/constants/api';
 
@@ -39,63 +40,62 @@ export default function DetailBahan() {
   const ingredientId = params.id ? String(params.id) : '';
   
   const [ingredient, setIngredient] = useState<IngredientDetail | null>(null);
-  const [locations, setLocations] = useState<Location[]>([]);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  /*
+   * =========================
+   * INGREDIENT DETAIL QUERY
+   * =========================
+   */
+  const {
+    data: queryIngredient,
+    isLoading: loading,
+    isError: queryHasError,
+  } = useQuery({
+    queryKey: ['ingredientDetail', ingredientId],
+    queryFn: async () => {
+      if (!ingredientId) throw new Error('Ingredient ID not provided');
+      const response = await fetch(`${API_BASE_URL}/ingredients/${ingredientId}`);
+      if (!response.ok) throw new Error(`API error: ${response.status}`);
+      const result = await response.json();
+      if (result?.success && result.data) return result.data;
+      throw new Error('Ingredient not found');
+    },
+    staleTime: 1000 * 60 * 10,
+    gcTime: 1000 * 60 * 30,
+    enabled: !!ingredientId,
+  });
+
+  /*
+   * =========================
+   * INGREDIENT LOCATIONS QUERY
+   * =========================
+   */
+  const {
+    data: locations = [],
+  } = useQuery({
+    queryKey: ['ingredientLocations', ingredientId],
+    queryFn: async () => {
+      const response = await fetch(`${API_BASE_URL}/ingredients/${ingredientId}/ingredient-locations`);
+      if (!response.ok) throw new Error(`API error: ${response.status}`);
+      const result = await response.json();
+      if (result?.success && Array.isArray(result.data)) return result.data;
+      return [];
+    },
+    staleTime: 1000 * 60 * 10,
+    gcTime: 1000 * 60 * 30,
+    enabled: !!ingredientId,
+  });
+
   useEffect(() => {
-    const fetchIngredient = async () => {
-      if (!ingredientId) {
-        setLoading(false);
-        return;
-      }
-
-      try {
-        const response = await fetch(`${API_BASE_URL}/ingredients/${ingredientId}`);
-
-        if (!response.ok) {
-          throw new Error(`API error: ${response.status}`);
-        }
-
-        const result = await response.json();
-
-        if (result?.success && result.data) {
-          setIngredient(result.data);
-          setError(null);
-        } else {
-          setError('Ingredient not found');
-        }
-      } catch (fetchError) {
-        console.error('Error fetching ingredient:', fetchError);
-        setError(fetchError instanceof Error ? fetchError.message : 'Failed to fetch ingredient');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    const fetchLocations = async () => {
-      try {
-        const response = await fetch(`${API_BASE_URL}/ingredients/${ingredientId}/ingredient-locations`);
-
-        if (!response.ok) {
-          throw new Error(`API error: ${response.status}`);
-        }
-
-        const result = await response.json();
-
-        if (result?.success && Array.isArray(result.data)) {
-          setLocations(result.data);
-        }
-      } catch (locError) {
-        console.error('Error fetching locations:', locError);
-      }
-    };
-
-    fetchIngredient();
-    if (ingredientId) {
-      fetchLocations();
+    if (queryIngredient) {
+      setIngredient(queryIngredient);
+      setError(null);
+    } else if (queryHasError) {
+      setError('Failed to fetch ingredient');
+      setIngredient(null);
     }
-  }, [ingredientId]);
+  }, [queryIngredient, queryHasError]);
 
   const bahanName = (ingredient?.name || params.name ? String(ingredient?.name || params.name) : 'Bahan').replace(/\s+/g, ' ').trim();
   

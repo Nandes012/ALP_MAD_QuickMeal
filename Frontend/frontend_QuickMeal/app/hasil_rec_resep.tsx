@@ -3,6 +3,7 @@ import { StyleSheet, Text, View, Image, FlatList, TouchableOpacity, StatusBar, P
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useQuery } from '@tanstack/react-query';
 import { useRecipeView } from '@/hooks/useRecipeView';
 import { API_BASE_URL } from '@/constants/api';
 
@@ -24,16 +25,19 @@ interface ResepItem {
 export default function HasilRecResepScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
-  const { saveRecipeView, saving } = useRecipeView();
+  const { saveRecipeView } = useRecipeView();
   const [recipes, setRecipes] = useState<ResepItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   // Extract parameters from route
   const time = params.time as string;
   const budgetMin = params.budgetMin as string;
   const budgetMax = params.budgetMax as string;
   const ingredients = params.ingredients as string;
+
+  // Create a cache key based on search parameters
+  const cacheKey = useMemo(() => {
+    return ['recipeRecommendations', time, budgetMin, budgetMax, ingredients];
+  }, [time, budgetMin, budgetMax, ingredients]);
 
   const summaryTime = useMemo(() => {
     if (!time) return '-';
@@ -54,69 +58,74 @@ export default function HasilRecResepScreen() {
       .filter(Boolean);
   }, [ingredients]);
 
-  useEffect(() => {
-    const fetchRecipes = async () => {
-      try {
-        const queryParams = new URLSearchParams();
-        if (time) queryParams.append('time', time);
-        if (budgetMin) queryParams.append('budgetMin', budgetMin);
-        if (budgetMax) queryParams.append('budgetMax', budgetMax);
-        if (ingredients) queryParams.append('ingredients', ingredients);
+  /*
+   * =========================
+   * RECIPE RECOMMENDATIONS QUERY
+   * =========================
+   */
+  const {
+    data: queryRecipes = [],
+    isLoading: loading,
+    error: queryError,
+  } = useQuery({
+    queryKey: cacheKey,
+    queryFn: async () => {
+      const queryParams = new URLSearchParams();
+      if (time) queryParams.append('time', time);
+      if (budgetMin) queryParams.append('budgetMin', budgetMin);
+      if (budgetMax) queryParams.append('budgetMax', budgetMax);
+      if (ingredients) queryParams.append('ingredients', ingredients);
 
-        const response = await fetch(`${API_BASE_URL}/recipes?${queryParams.toString()}`);
+      const response = await fetch(`${API_BASE_URL}/recipes?${queryParams.toString()}`);
+      if (!response.ok) throw new Error(`API error: ${response.status}`);
 
-        if (!response.ok) {
-          throw new Error(`API error: ${response.status}`);
-        }
-
-        const result = await response.json();
-
-        if (result?.success && Array.isArray(result.data)) {
-          const mappedRecipes = result.data.map((item: any) => ({
-            id: String(item.id),
-            title: item.title || item.name || 'Resep',
-            price: Number(item.totalIngredientPrice || item.price || 0).toLocaleString('id-ID'),
-            time: item.cookingTime ? `${item.cookingTime} Menit` : '20 Menit',
-            image: item.image || item.imageUrl || 'https://via.placeholder.com/300',
-            ingredients: Array.isArray(item.ingredients) ? item.ingredients : [],
-          }));
-
-          setRecipes(mappedRecipes);
-          setError(null);
-        } else {
-          setRecipes([]);
-          setError('Data rekomendasi tidak tersedia');
-        }
-      } catch (err) {
-        console.error('Error fetching recipes:', err);
-        setError(err instanceof Error ? err.message : 'Gagal memuat rekomendasi');
-        setRecipes([]);
-      } finally {
-        setLoading(false);
+      const result = await response.json();
+      if (!result?.success || !Array.isArray(result.data)) {
+        throw new Error('Data rekomendasi tidak tersedia');
       }
-    };
 
-    fetchRecipes();
-  }, [time, budgetMin, budgetMax, ingredients]);
+      return result.data;
+    },
+    staleTime: 1000 * 60 * 15, // 15 minutes
+    gcTime: 1000 * 60 * 45, // 45 minutes
+    enabled: !!(time || budgetMin || budgetMax || ingredients),
+  });
+
+  // Sync query data to local state and populate recipe cache
+  useEffect(() => {
+    if (Array.isArray(queryRecipes) && queryRecipes.length > 0) {
+      const mappedRecipes = queryRecipes.map((item: any) => ({
+        id: String(item.id),
+        title: item.title || item.name || 'Resep',
+        price: Number(item.totalIngredientPrice || item.price || 0).toLocaleString('id-ID'),
+        time: item.cookingTime ? `${item.cookingTime} Menit` : '20 Menit',
+        image: item.image || item.imageUrl || 'https://via.placeholder.com/300',
+        ingredients: Array.isArray(item.ingredients) ? item.ingredients : [],
+      }));
+
+      setRecipes(mappedRecipes);
+    }
+  }, [queryRecipes]);
 
   const topRecipes = useMemo(() => recipes.slice(0, 3), [recipes]);
   const otherRecipes = useMemo(() => recipes.slice(3, 6), [recipes]);
 
-  const handleRecipePress = async (item: ResepItem) => {
-    const success = await saveRecipeView(item.id);
-    if (success) {
-      router.push({
-        pathname: '/detail_resep',
-        params: { 
-          id: item.id,
-          name: item.title, 
-          imageUrl: item.image,
-          price: item.price,
-          time: item.time,
-          ingredients: ingredients || ''
-        }
-      });
-    }
+  const handleRecipePress = (item: ResepItem) => {
+    // Navigate immediately for instant feedback
+    router.push({
+      pathname: '/detail_resep',
+      params: { 
+        id: item.id,
+        name: item.title, 
+        imageUrl: item.image,
+        price: item.price,
+        time: item.time,
+        ingredients: ingredients || ''
+      }
+    });
+    
+    // Save in background without blocking navigation
+    saveRecipeView(item.id);
   };
 
   const renderCard = (item: ResepItem) => {
@@ -126,7 +135,6 @@ export default function HasilRecResepScreen() {
         style={styles.premiumCard}
         activeOpacity={0.85}
         onPress={() => handleRecipePress(item)}
-        disabled={saving}
       >
         <Image source={{ uri: item.image }} style={styles.premiumFoodImage} resizeMode="cover" />
         <View style={styles.premiumCardInfo}>
@@ -146,14 +154,10 @@ export default function HasilRecResepScreen() {
             </View>
           </View>
 
-          {saving ? (
-            <ActivityIndicator size="small" color="#9E5F3B" style={{ alignSelf: 'flex-start', marginTop: 4 }} />
-          ) : (
-            <View style={styles.premiumActionButton}>
-              <Text style={styles.premiumActionText}>Lihat Resep</Text>
-              <Ionicons name="chevron-forward" size={11} color="#FFFFFF" style={{ marginLeft: 4 }} />
-            </View>
-          )}
+          <View style={styles.premiumActionButton}>
+            <Text style={styles.premiumActionText}>Lihat Resep</Text>
+            <Ionicons name="chevron-forward" size={11} color="#FFFFFF" style={{ marginLeft: 4 }} />
+          </View>
         </View>
       </TouchableOpacity>
     );
@@ -228,9 +232,11 @@ export default function HasilRecResepScreen() {
               <ActivityIndicator size="large" color="#9E5F3B" />
               <Text style={styles.loadingText}>Memuat rekomendasi...</Text>
             </View>
-          ) : error ? (
+          ) : queryError ? (
             <View style={styles.loadingWrap}>
-              <Text style={styles.errorText}>{error}</Text>
+              <Text style={styles.errorText}>
+                {queryError instanceof Error ? queryError.message : 'Gagal memuat rekomendasi'}
+              </Text>
             </View>
           ) : (
             <FlatList
