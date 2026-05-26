@@ -23,6 +23,7 @@ export default function FromResepScreen() {
   const [loadingIngredients, setLoadingIngredients] = useState(false);
   const [dropdownVisibleIndex, setDropdownVisibleIndex] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [fetchError, setFetchError] = useState('');
 
   // 🌟 Membuat array pilihan angka formal
   const hoursArray = Array.from({ length: 24 }, (_, i) => i);
@@ -32,28 +33,57 @@ export default function FromResepScreen() {
   // Tinggi item satuan untuk kalkulasi snapping scroll otomatis
   const ITEM_HEIGHT = 40;
 
-  // 🌟 Fetch ingredients dari API
-  useEffect(() => {
-    const fetchIngredients = async () => {
-      setLoadingIngredients(true);
-      try {
-        const response = await fetch(`${API_BASE_URL}/ingredients`);
-        if (!response.ok) {
-          throw new Error(`API error: ${response.status}`);
+  // 🌟 Fungsi untuk fetch & cache ingredients (30 minutes cache like in list.tsx)
+  const fetchAndCacheIngredients = async () => {
+    try {
+      // Check if cache exists and is still valid
+      const cached = await AsyncStorage.getItem('cached_ingredients');
+      if (cached) {
+        const { data, timestamp } = JSON.parse(cached);
+        const cacheAge = Date.now() - timestamp;
+        const CACHE_DURATION = 1000 * 60 * 30; // 30 minutes
+        
+        if (cacheAge < CACHE_DURATION) {
+          setIngredients(Array.isArray(data) ? data : []);
+          setFetchError('');
+          return;
         }
-        const data = await response.json();
-        const ingredientList = data.data || data || [];
-        setIngredients(Array.isArray(ingredientList) ? ingredientList : []);
-      } catch (error) {
-        console.error('Error fetching ingredients:', error);
-        setIngredients([]);
-      } finally {
-        setLoadingIngredients(false);
       }
-    };
 
+      // Fetch from API if cache is missing or expired
+      const response = await fetch(`${API_BASE_URL}/ingredients`);
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`);
+      }
+      const result = await response.json();
+      const ingredientList = result.data || result || [];
+      const validList = Array.isArray(ingredientList) ? ingredientList : [];
+      
+      // Save to cache with timestamp
+      await AsyncStorage.setItem('cached_ingredients', JSON.stringify({
+        data: validList,
+        timestamp: Date.now()
+      }));
+
+      setIngredients(validList);
+      setFetchError('');
+    } catch (error) {
+      console.error('Error fetching ingredients:', error);
+      setFetchError('fetching failed');
+      setIngredients([]);
+    }
+  };
+
+  // 🌟 Prefetch ingredients on component mount
+  useEffect(() => {
+    fetchAndCacheIngredients();
+  }, []);
+
+  // 🌟 Load ingredients from cache when step 3 is reached
+  useEffect(() => {
     if (step === 3) {
-      fetchIngredients();
+      setLoadingIngredients(true);
+      fetchAndCacheIngredients().finally(() => setLoadingIngredients(false));
     }
   }, [step]); 
 
@@ -304,6 +334,11 @@ export default function FromResepScreen() {
                     <ActivityIndicator size="large" color="#9E5F3B" />
                   ) : (
                     <>
+                      {fetchError && (
+                        <Text style={{ fontSize: 13, color: '#D9534F', marginBottom: 12, fontWeight: 'bold' }}>
+                          {fetchError}
+                        </Text>
+                      )}
                       {/* Box List dengan scroll area maksimal tinggi 180 agar tidak berantakan */}
                       <View style={{ width: '100%', maxHeight: 180 }}>
                         <ScrollView showsVerticalScrollIndicator={true} nestedScrollEnabled={true}>
