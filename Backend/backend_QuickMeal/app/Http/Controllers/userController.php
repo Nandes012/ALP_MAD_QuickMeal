@@ -3,59 +3,29 @@
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\Concerns\ApiResponses;
-use App\Models\User;
+use App\Services\UserService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
 
 class UserController extends Controller
 {
     use ApiResponses;
 
-    private const DEFAULT_PROFILE_PICTURE = 'profile_pictures/1778642103_person.jpg';
-    private const GMAIL_REGEX = '/^[A-Za-z0-9._%+-]+@gmail\.com$/';
-    private const PUBLIC_STORAGE_PREFIX = 'app/public/';
+    public function __construct(private readonly UserService $userService)
+    {
+    }
 
     /**
      * POST /api/auth/register
      */
     public function register(Request $request)
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => [
-                'required',
-                'email:rfc,dns',
-                'unique:users,email',
-                'regex:' . self::GMAIL_REGEX,
-            ],
-            'password' => 'required|string|min:8',
-            'profile_picture' => 'nullable|image|mimes:jpeg,png,jpg,gif,heic|max:2048',
-        ]);
-
-        $validated['email'] = strtolower($validated['email']);
-        $validated['password'] = Hash::make($validated['password']);
-        $validated['is_premium'] = false;
-
-        if ($request->hasFile('profile_picture')) {
-            $filename = time() . '_' . $request->file('profile_picture')->getClientOriginalName();
-            $validated['profile_picture'] = $request->file('profile_picture')->storeAs('profile_pictures', $filename, 'public');
-        } else {
-            $validated['profile_picture'] = self::DEFAULT_PROFILE_PICTURE;
-        }
-
-        $user = User::create($validated);
-
-        if (!$user->profile_picture) {
-            $user->profile_picture = self::DEFAULT_PROFILE_PICTURE;
-        }
-
-        $token = $user->createToken('auth_token')->plainTextToken;
+        $result = $this->userService->register($request);
 
         return response()->json([
             'success' => true,
             'message' => 'User registered successfully',
-            'user' => $user,
-            'token' => $token,
+            'user' => $result['user'],
+            'token' => $result['token'],
         ], 201);
     }
 
@@ -64,34 +34,17 @@ class UserController extends Controller
      */
     public function login(Request $request)
     {
-        $validated = $request->validate([
-            'email' => [
-                'required',
-                'email:rfc,dns',
-                'regex:' . self::GMAIL_REGEX,
-            ],
-            'password' => 'required|string',
-        ]);
+        $result = $this->userService->login($request);
 
-        $validated['email'] = strtolower($validated['email']);
-
-        $user = User::where('email', $validated['email'])->first();
-
-        if (!$user || !Hash::check($validated['password'], $user->password)) {
+        if ($result === null) {
             return $this->errorResponse('Invalid email or password', 401);
         }
-
-        if (!$user->profile_picture) {
-            $user->profile_picture = self::DEFAULT_PROFILE_PICTURE;
-        }
-
-        $token = $user->createToken('auth_token')->plainTextToken;
 
         return response()->json([
             'success' => true,
             'message' => 'Login successful',
-            'user' => $user,
-            'token' => $token,
+            'user' => $result['user'],
+            'token' => $result['token'],
         ], 200);
     }
 
@@ -100,14 +53,10 @@ class UserController extends Controller
      */
     public function me(Request $request)
     {
-        $user = $request->user();
+        $user = $this->userService->me($request->user());
 
         if (!$user) {
             return $this->unauthorizedResponse();
-        }
-
-        if (!$user->profile_picture) {
-            $user->profile_picture = self::DEFAULT_PROFILE_PICTURE;
         }
 
         return $this->successResponse($user);
@@ -143,18 +92,10 @@ class UserController extends Controller
             return $this->unauthorizedResponse();
         }
 
-        $user = User::with([
-            'recentViewedRecipes',
-            'recommendations',
-            'subscriptions',
-        ])->find($authUser->id);
+        $user = $this->userService->findCurrentUserDetails($authUser);
 
         if (!$user) {
             return $this->notFoundResponse('User');
-        }
-
-        if (!$user->profile_picture) {
-            $user->profile_picture = self::DEFAULT_PROFILE_PICTURE;
         }
 
         return $this->successResponse($user);
@@ -162,24 +103,7 @@ class UserController extends Controller
 
     private function usersListResponse(Request $request)
     {
-        $page = $request->query('page');
-        $perPage = (int) $request->query('perPage', 20);
-
-        if ($page) {
-            $paginator = User::paginate($perPage);
-            $usersCollection = collect($paginator->items());
-        } else {
-            $usersCollection = User::limit((int) $request->query('limit', 100))->get();
-            $paginator = null;
-        }
-
-        $usersCollection = $usersCollection->map(function ($user) {
-            if (!$user->profile_picture) {
-                $user->profile_picture = self::DEFAULT_PROFILE_PICTURE;
-            }
-
-            return $user;
-        });
+        [$usersCollection, $paginator] = $this->userService->listUsers($request);
 
         return $this->successResponse(
             $usersCollection,
@@ -197,18 +121,10 @@ class UserController extends Controller
      */
     public function show($id)
     {
-        $user = User::with([
-            'recentViewedRecipes',
-            'recommendations',
-            'subscriptions',
-        ])->find($id);
+        $user = $this->userService->findById($id);
 
         if (!$user) {
             return $this->notFoundResponse('User');
-        }
-
-        if (!$user->profile_picture) {
-            $user->profile_picture = self::DEFAULT_PROFILE_PICTURE;
         }
 
         return $this->successResponse($user);
@@ -221,56 +137,9 @@ class UserController extends Controller
     {
         $user = $request->user();
 
-        $validated = $request->validate([
-            'name' => 'sometimes|string|max:255',
-            'email' => [
-                'sometimes',
-                'email:rfc,dns',
-                'unique:users,email,' . $user->id,
-                'regex:' . self::GMAIL_REGEX,
-            ],
-            'password' => 'sometimes|string|min:8',
-            'profile_picture' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp,heic|max:2048',
-            'remove_profile_picture' => 'sometimes|boolean',
-        ]);
+        $updated = $this->userService->update($user, $request);
 
-        if (isset($validated['email'])) {
-            $validated['email'] = strtolower($validated['email']);
-        }
-
-        if (isset($validated['password'])) {
-            $validated['password'] = Hash::make($validated['password']);
-        }
-
-        if ($request->filled('remove_profile_picture')) {
-            if (
-                $user->profile_picture &&
-                $user->profile_picture !== self::DEFAULT_PROFILE_PICTURE &&
-                file_exists(storage_path(self::PUBLIC_STORAGE_PREFIX . $user->profile_picture))
-            ) {
-                unlink(storage_path(self::PUBLIC_STORAGE_PREFIX . $user->profile_picture));
-            }
-
-            $validated['profile_picture'] = null;
-        }
-
-        if ($request->hasFile('profile_picture')) {
-            if (
-                $user->profile_picture &&
-                $user->profile_picture !== self::DEFAULT_PROFILE_PICTURE &&
-                file_exists(storage_path(self::PUBLIC_STORAGE_PREFIX . $user->profile_picture))
-            ) {
-                unlink(storage_path(self::PUBLIC_STORAGE_PREFIX . $user->profile_picture));
-            }
-
-            $file = $request->file('profile_picture');
-            $filename = time() . '_' . $file->getClientOriginalName();
-            $validated['profile_picture'] = $file->storeAs('profile_pictures', $filename, 'public');
-        }
-
-        $user->update($validated);
-
-        return $this->successResponse($user, 'User updated successfully');
+        return $this->successResponse($updated, 'User updated successfully');
     }
 
     /**
@@ -278,13 +147,11 @@ class UserController extends Controller
      */
     public function destroy(Request $request, $id)
     {
-        $user = User::findOrFail($id);
+        $deleted = $this->userService->delete($request->user(), $id);
 
-        if ($request->user()->id !== $user->id) {
+        if (!$deleted) {
             return $this->errorResponse('Unauthorized', 403);
         }
-
-        $user->delete();
 
         return $this->successResponse(null, 'User deleted successfully');
     }
@@ -296,25 +163,8 @@ class UserController extends Controller
     {
         $user = $request->user();
 
-        $request->validate([
-            'profile_picture' => 'required|image|mimes:jpeg,png,jpg,gif,webp,heic|max:2048',
-        ]);
+        $updated = $this->userService->updateProfilePicture($user, $request);
 
-        if (
-            $user->profile_picture &&
-            $user->profile_picture !== self::DEFAULT_PROFILE_PICTURE &&
-            file_exists(storage_path(self::PUBLIC_STORAGE_PREFIX . $user->profile_picture))
-        ) {
-            unlink(storage_path(self::PUBLIC_STORAGE_PREFIX . $user->profile_picture));
-        }
-
-        if ($request->hasFile('profile_picture')) {
-            $file = $request->file('profile_picture');
-            $filename = time() . '_' . $file->getClientOriginalName();
-            $user->profile_picture = $file->storeAs('profile_pictures', $filename, 'public');
-            $user->save();
-        }
-
-        return $this->successResponse($user, 'Profile picture updated successfully');
+        return $this->successResponse($updated, 'Profile picture updated successfully');
     }
 }

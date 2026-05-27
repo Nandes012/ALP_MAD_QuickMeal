@@ -3,12 +3,16 @@
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\Concerns\ApiResponses;
-use App\Models\tag;
+use App\Services\TagService;
 use Illuminate\Http\Request;
 
 class TagController extends Controller
 {
     use ApiResponses;
+
+    public function __construct(private readonly TagService $tagService)
+    {
+    }
 
     /**
      * GET /api/tags
@@ -16,22 +20,7 @@ class TagController extends Controller
      */
     public function index(Request $request)
     {
-        $type = $request->query('type');
-
-        $query = tag::query();
-
-        if ($type) {
-            $query->where('type', $type);
-        }
-
-        $tags = $query->get()->map(function ($tag) {
-            return [
-                'id' => $tag->id,
-                'name' => $tag->name,
-                'icon' => $tag->icon,
-                'type' => $tag->type,
-            ];
-        });
+        $tags = $this->tagService->index($request->query('type'));
 
         return $this->successResponse($tags, 'Tags fetched successfully');
     }

@@ -132,7 +132,7 @@ export default function BahanTersediaView(props: Props) {
                   <Ionicons name="storefront-outline" size={28} color="#fff" />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.heroTitle}>Akan diisi dari fetching</Text>
+                  <Text style={styles.heroTitle}>Bahan yang belum dimiliki</Text>
                   <Text style={styles.heroText}>
                     Page ini disiapkan untuk menampilkan bahan yang tersedia, bahan yang belum dimiliki user, dan lokasi toko terdekat.
                   </Text>

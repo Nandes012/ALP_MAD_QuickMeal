@@ -155,7 +155,7 @@ export default function ListScreen() {
       {/* JUDUL SEKSI */}
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>
-          {activeTab === 'Masak' ? '🔥 Pilihan Resep Spesial' : '🥦 Jelajahi Bahan Baku'}
+          {activeTab === 'Masak' ? 'Pilihan Resep Spesial' : 'Jelajahi Bahan Baku'}
         </Text>
       </View>
 

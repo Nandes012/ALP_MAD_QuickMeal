@@ -49,7 +49,7 @@ export default function HomeView(props: Props) {
           </View>
 
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>✨ Rekomendasi Spesial</Text>
+            <Text style={styles.sectionTitle}>Rekomendasi Spesial</Text>
             <Text style={styles.sectionSubtitle}>Dibuat khusus untuk menggugah seleramu</Text>
           </View>
 
@@ -82,7 +82,7 @@ export default function HomeView(props: Props) {
           )}
 
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>🕒 Terakhir Dilihat</Text>
+            <Text style={styles.sectionTitle}>Terakhir Dilihat</Text>
             <Text style={styles.sectionSubtitle}>Jangan sampai lupa resep yang kamu incar kemarin</Text>
           </View>
 

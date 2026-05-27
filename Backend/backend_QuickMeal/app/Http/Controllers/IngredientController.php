@@ -3,46 +3,30 @@
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\Concerns\ApiResponses;
-use App\Models\Ingredient;
+use App\Services\IngredientService;
 use Illuminate\Http\Request;
 
 class IngredientController extends Controller
 {
     use ApiResponses;
 
+    public function __construct(private readonly IngredientService $ingredientService)
+    {
+    }
+
     /**
      * GET /api/ingredients
      */
     public function index(Request $request)
     {
-        [$ingredients, $paginator] = $this->paginateOrLimit(Ingredient::with('tags'), $request);
-
-        // Map ingredients to include tags
-        $ingredientsMapped = $ingredients->map(function ($ingredient) {
-            return [
-                'id' => $ingredient->id,
-                'name' => $ingredient->name,
-                'ingredient_picture' => $ingredient->ingredient_picture,
-                'ingredient_video' => $ingredient->ingredient_video,
-                'price_per_kg' => $ingredient->price_per_kg,
-                'tags' => $ingredient->tags->map(function ($tag) {
-                    return [
-                        'id' => $tag->id,
-                        'name' => $tag->name,
-                        'icon' => $tag->icon,
-                        'type' => $tag->type,
-                    ];
-                })->toArray(),
-                'created_at' => $ingredient->created_at,
-                'updated_at' => $ingredient->updated_at,
-            ];
-        });
+        $result = $this->ingredientService->index($request);
+        $ingredientsMapped = $this->ingredientService->mapCollection($result['items']);
 
         return $this->successResponse(
             $ingredientsMapped,
             'Ingredients fetched successfully',
             200,
-            $paginator ? ['meta' => $this->paginationMeta($paginator)] : []
+            $result['paginator'] ? ['meta' => $this->paginationMeta($result['paginator'])] : []
         );
     }
 
@@ -58,7 +42,7 @@ class IngredientController extends Controller
             'price_per_kg' => 'nullable|integer',
         ]);
 
-        $ingredient = Ingredient::create($validated);
+        $ingredient = $this->ingredientService->create($validated);
 
         return response()->json([
             'success' => true,
@@ -72,31 +56,32 @@ class IngredientController extends Controller
      */
     public function show($id)
     {
-        $ingredient = Ingredient::with('locations', 'tags')->find($id);
+        $ingredient = $this->ingredientService->findById($id);
 
         if (!$ingredient) {
             return $this->notFoundResponse('Ingredient');
         }
 
-        $ingredientData = [
-            'id' => $ingredient->id,
-            'name' => $ingredient->name,
-            'ingredient_picture' => $ingredient->ingredient_picture,
-            'ingredient_video' => $ingredient->ingredient_video,
-            'price_per_kg' => $ingredient->price_per_kg,
-            'tags' => $ingredient->tags->map(function ($tag) {
-                return [
-                    'id' => $tag->id,
-                    'name' => $tag->name,
-                    'icon' => $tag->icon,
-                    'type' => $tag->type,
-                ];
-            })->toArray(),
-            'created_at' => $ingredient->created_at,
-            'updated_at' => $ingredient->updated_at,
-        ];
-
-        return $this->successResponse($ingredientData, 'Ingredient fetched successfully');
+        return $this->successResponse(
+            [
+                'id' => $ingredient->id,
+                'name' => $ingredient->name,
+                'ingredient_picture' => $ingredient->ingredient_picture,
+                'ingredient_video' => $ingredient->ingredient_video,
+                'price_per_kg' => $ingredient->price_per_kg,
+                'tags' => $ingredient->tags->map(function ($tag) {
+                    return [
+                        'id' => $tag->id,
+                        'name' => $tag->name,
+                        'icon' => $tag->icon,
+                        'type' => $tag->type,
+                    ];
+                })->toArray(),
+                'created_at' => $ingredient->created_at,
+                'updated_at' => $ingredient->updated_at,
+            ],
+            'Ingredient fetched successfully'
+        );
     }
 
     /**
@@ -104,12 +89,6 @@ class IngredientController extends Controller
      */
     public function update(Request $request, $id)
     {
-        $ingredient = Ingredient::find($id);
-
-        if (!$ingredient) {
-            return $this->notFoundResponse('Ingredient');
-        }
-
         $validated = $request->validate([
             'name' => 'required|string|max:255|unique:ingredients,name,' . $id,
             'ingredient_picture' => 'nullable|string',
@@ -117,7 +96,11 @@ class IngredientController extends Controller
             'price_per_kg' => 'nullable|integer',
         ]);
 
-        $ingredient->update($validated);
+        $ingredient = $this->ingredientService->update($id, $validated);
+
+        if (!$ingredient) {
+            return $this->notFoundResponse('Ingredient');
+        }
 
         return $this->successResponse($ingredient, 'Ingredient updated successfully');
     }
@@ -127,13 +110,11 @@ class IngredientController extends Controller
      */
     public function destroy($id)
     {
-        $ingredient = Ingredient::find($id);
+        $deleted = $this->ingredientService->delete($id);
 
-        if (!$ingredient) {
+        if (!$deleted) {
             return $this->notFoundResponse('Ingredient');
         }
-
-        $ingredient->delete();
 
         return $this->successResponse(null, 'Ingredient deleted successfully');
     }
