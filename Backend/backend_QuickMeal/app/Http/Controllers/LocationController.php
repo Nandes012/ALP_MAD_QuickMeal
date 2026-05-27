@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\Concerns\ApiResponses;
-use App\Models\Location;
+use App\Services\LocationService;
 use Illuminate\Http\Request;
 
 class LocationController extends Controller
@@ -13,10 +13,13 @@ class LocationController extends Controller
     /**
      * GET /api/locations
      */
+    public function __construct(private readonly LocationService $locationService)
+    {
+    }
+
     public function index(Request $request)
     {
-        $query = Location::with('ingredients');
-        [$locations, $paginator] = $this->paginateOrLimit($query, $request);
+        [$locations, $paginator] = $this->locationService->index($request);
 
         return $this->successResponse(
             $locations,
@@ -31,8 +34,7 @@ class LocationController extends Controller
      */
     public function show($id)
     {
-        $location = Location::with('ingredients')
-            ->find($id);
+        $location = $this->locationService->findById($id);
 
         if (!$location) {
             return $this->notFoundResponse('Location');
@@ -57,20 +59,9 @@ class LocationController extends Controller
             'ingredient_ids.*' => 'exists:ingredients,id',
         ]);
 
-        $location = Location::create([
-            'location_name' => $validated['location_name'],
-            'road_name' => $validated['road_name'] ?? null,
-            'location_picture' => $validated['location_picture'],
-            'google_maps_link' => $validated['google_maps_link'],
-            'opening_time' => $validated['opening_time'] ?? null,
-            'closing_time' => $validated['closing_time'] ?? null,
-        ]);
+        $location = $this->locationService->create($validated);
 
-        if (!empty($validated['ingredient_ids'])) {
-            $location->ingredients()->attach($validated['ingredient_ids']);
-        }
-
-        return $this->successResponse($location->load('ingredients'), 'Location created successfully', 201);
+        return $this->successResponse($location, 'Location created successfully', 201);
     }
 
     /**
@@ -78,30 +69,13 @@ class LocationController extends Controller
      */
     public function update(Request $request, $id)
     {
-        $location = Location::find($id);
+        $updated = $this->locationService->update($id, $request->all());
 
-        if (!$location) {
+        if (!$updated) {
             return $this->notFoundResponse('Location');
         }
 
-        $validated = $request->validate([
-            'location_name' => 'sometimes|string|max:255',
-            'road_name' => 'nullable|string|max:255',
-            'location_picture' => 'sometimes|string',
-            'google_maps_link' => 'sometimes|string',
-            'opening_time' => 'nullable|date_format:H:i',
-            'closing_time' => 'nullable|date_format:H:i',
-            'ingredient_ids' => 'nullable|array',
-            'ingredient_ids.*' => 'exists:ingredients,id',
-        ]);
-
-        $location->update($validated);
-
-        if (isset($validated['ingredient_ids'])) {
-            $location->ingredients()->sync($validated['ingredient_ids']);
-        }
-
-        return $this->successResponse($location->load('ingredients'), 'Location updated successfully');
+        return $this->successResponse($updated, 'Location updated successfully');
     }
 
     /**
@@ -109,13 +83,11 @@ class LocationController extends Controller
      */
     public function destroy($id)
     {
-        $location = Location::find($id);
+        $deleted = $this->locationService->delete($id);
 
-        if (!$location) {
+        if (!$deleted) {
             return $this->notFoundResponse('Location');
         }
-
-        $location->delete();
 
         return $this->successResponse(null, 'Location deleted successfully');
     }

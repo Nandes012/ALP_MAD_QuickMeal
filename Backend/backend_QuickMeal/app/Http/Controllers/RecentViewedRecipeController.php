@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\Concerns\ApiResponses;
-use App\Models\RecentViewedRecipe;
+use App\Services\RecentViewedService;
 use Illuminate\Http\Request;
 
 class RecentViewedRecipeController extends Controller
@@ -13,6 +13,10 @@ class RecentViewedRecipeController extends Controller
     /**
      * Display a listing of the 5 most recent viewed recipes for authenticated user.
      */
+    public function __construct(private readonly RecentViewedService $recentViewedService)
+    {
+    }
+
     public function index(Request $request)
     {
         $user = $request->user();
@@ -21,11 +25,7 @@ class RecentViewedRecipeController extends Controller
             return $this->unauthorizedResponse();
         }
 
-        $recentRecipes = RecentViewedRecipe::where('user_id', $user->id)
-            ->with('recipe')
-            ->latest('created_at')
-            ->limit(5)
-            ->get();
+        $recentRecipes = $this->recentViewedService->recentForUser($user);
 
         return $this->successResponse($recentRecipes, 'Recently viewed recipes retrieved successfully');
     }
@@ -46,26 +46,9 @@ class RecentViewedRecipeController extends Controller
             return $this->unauthorizedResponse();
         }
 
-        // Delete any existing view of this recipe for this user (to avoid duplicates)
-        RecentViewedRecipe::where('user_id', $user->id)
-            ->where('recipe_id', $validated['recipe_id'])
-            ->delete();
+        $recentView = $this->recentViewedService->storeView($user, (int) $validated['recipe_id']);
 
-        // Create new recent viewed recipe record
-        $recentView = RecentViewedRecipe::create([
-            'user_id' => $user->id,
-            'recipe_id' => $validated['recipe_id'],
-        ]);
-
-        // Keep only the newest 5 rows without loading the full history.
-        RecentViewedRecipe::where('user_id', $user->id)
-            ->whereNotIn('id', RecentViewedRecipe::where('user_id', $user->id)
-                ->latest('created_at')
-                ->limit(5)
-                ->pluck('id'))
-            ->delete();
-
-        return $this->successResponse($recentView->load('recipe'), 'Recipe view recorded successfully', 201);
+        return $this->successResponse($recentView, 'Recipe view recorded successfully', 201);
     }
 
     /**
