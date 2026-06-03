@@ -27,7 +27,7 @@ class UserService
                 'regex:' . self::GMAIL_REGEX,
             ],
             'password' => 'required|string|min:8',
-            'profile_picture' => 'nullable|image|mimes:jpeg,png,jpg,gif,heic|max:2048',
+            'profile_picture' => 'nullable|image|mimes:jpeg,png,jpg,heic|max:2048',
         ]);
 
         $validated['email'] = strtolower($validated['email']);
@@ -143,7 +143,7 @@ class UserService
                 'regex:' . self::GMAIL_REGEX,
             ],
             'password' => 'sometimes|string|min:8',
-            'profile_picture' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp,heic|max:2048',
+            'profile_picture' => 'nullable|image|mimes:jpeg,png,jpg,webp,heic|max:2048',
             'remove_profile_picture' => 'sometimes|boolean',
         ]);
 
@@ -202,7 +202,7 @@ class UserService
     public function updateProfilePicture($user, Request $request)
     {
         $request->validate([
-            'profile_picture' => 'required|image|mimes:jpeg,png,jpg,gif,webp,heic|max:2048',
+            'profile_picture' => 'required|image|mimes:jpeg,png,jpg,webp,heic|max:2048',
         ]);
 
         if (
