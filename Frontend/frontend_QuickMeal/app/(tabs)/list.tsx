@@ -141,7 +141,15 @@ export default function ListScreen() {
                 onPress={() => setActiveCategory(String(cat.id))}
               >
                 <View style={[styles.categoryIconCircle, isSelected && styles.categoryIconCircleActive]}>
-                  <Text style={styles.categoryEmoji}>{cat.icon}</Text>
+                  {cat.icon && (cat.icon.startsWith('http') || cat.icon.startsWith('storage')) ? (
+                    <Image 
+                      source={{ uri: cat.icon }} 
+                      style={{ width: 40, height: 40 }} 
+                      resizeMode="contain"
+                    />
+                  ) : (
+                    <Text style={styles.categoryEmoji}>{cat.icon}</Text>
+                  )}
                 </View>
                 <Text style={[styles.categoryName, isSelected && styles.categoryNameActive]} numberOfLines={1}>
                   {cat.name}
