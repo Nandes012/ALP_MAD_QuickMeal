@@ -124,7 +124,7 @@ class IngredientLocationSeeder extends Seeder
             ['ingredient_id' => 30, 'id_location' => 7, 'price_per_kg_location' => 62300],
 
             // 31. Ikan Asin Teri (Rp106.500/kg)
-            ['ingredient_id' => 31, 'id_location' => 16, 'price_per_kg_location' => 106500],
+            ['ingredient_id' => 31, 'id_location' => 10, 'price_per_kg_location' => 106500],
 
             // 32. Tempe (Rp5.200/papan)
             ['ingredient_id' => 32, 'id_location' => 8, 'price_per_kg_location' => 5200],
@@ -139,7 +139,7 @@ class IngredientLocationSeeder extends Seeder
             ['ingredient_id' => 35, 'id_location' => 9, 'price_per_kg_location' => 25500],
 
             // 36. Kacang Kedelai Lokal (Rp24.400/kg)
-            ['ingredient_id' => 36, 'id_location' => 17, 'price_per_kg_location' => 24400],
+            ['ingredient_id' => 36, 'id_location' => 1, 'price_per_kg_location' => 24400],
 
             // 37. Kacang Kedelai Impor (Rp23.100/kg)
             ['ingredient_id' => 37, 'id_location' => 12, 'price_per_kg_location' => 23100],
