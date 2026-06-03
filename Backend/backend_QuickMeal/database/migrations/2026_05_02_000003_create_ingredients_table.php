@@ -14,7 +14,7 @@ return new class extends Migration
             $table->string('name');
 
             // Picture URL
-            $table->string('ingredient_picture')->nullable();
+            $table->text('ingredient_picture')->nullable();
 
             // Video stored in database
             $table->text('ingredient_video')->nullable();

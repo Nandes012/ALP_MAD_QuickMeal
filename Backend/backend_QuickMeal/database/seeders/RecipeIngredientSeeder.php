@@ -17,42 +17,76 @@ class RecipeIngredientSeeder extends Seeder
      */
     public function run(): void
     {
-        $bumbuDasar = 'Bumbu Dasar';
-
         $recipeIngredientMap = [
-            'Ayam Goreng' => [
-                ['Ayam', '1 ekor', 10000],
-                ['Minyak', '500 ml', 2000],
-                ['Tepung', '200 gr', 3000],
-                ['Garam', '1 sdt', 500],
-                ['Telur', '1 butir', 2500],
+            'Telur Ceplok Kecap' => [
+                ['Telur Ayam Ras', '2 butir', 5000],
+                ['Kecap Manis', '2 sdm', 3000],
+                ['Minyak Goreng Kemasan', '2 sdm', 2000],
+                ['Bawang Merah', '2 siung', 2000],
+                ['Garam Konsumsi Beryodium (Halus)', '1 sdt', 500],
             ],
-            'Ayam Bakar' => [
-                ['Ayam', '1 ekor', 10000],
-                ['Kecap', '3 sdm', 2000],
-                [$bumbuDasar, 'secukupnya', 4000],
-                ['Minyak', '100 ml', 1000],
+            'Tumis Sawi Putih & Bakso' => [
+                ['Sawi Putih', '200 gr', 1600],
+                ['Bakso', '100 gr', 4000],
+                ['Minyak Goreng Kemasan', '2 sdm', 2000],
+                ['Bawang Putih Bonggol', '3 siung', 2400],
+                ['Garam Konsumsi Beryodium (Halus)', '1 sdt', 500],
             ],
-            'Nasi Goreng' => [
-                ['Nasi Putih', '1 porsi', 4000],
-                ['Telur', '1 butir', 2500],
-                ['Bawang', 'secukupnya', 1000],
-                ['Kecap', '2 sdm', 1500],
+            'Orek Tempe Kecap' => [
+                ['Tempe', '1 blok', 3000],
+                ['Kecap Manis', '2 sdm', 3000],
+                ['Minyak Goreng Kemasan', '3 sdm', 3000],
+                ['Bawang Merah', '2 siung', 2000],
+                ['Cabai Rawit Merah', '2 buah', 1000],
             ],
-            'Rendang' => [
-                ['Daging Sapi', '500 gr', 45000],
-                ['Santan', '500 ml', 8000],
-                [$bumbuDasar, 'secukupnya', 5000],
+            'Sup Telur Tomat' => [
+                ['Telur Ayam Ras', '2 butir', 5000],
+                ['Tomat', '2 buah', 3000],
+                ['Bawang Putih Bonggol', '3 siung', 2400],
+                ['Bawang Merah', '2 siung', 2000],
+                ['Garam Konsumsi Beryodium (Halus)', '1 sdt', 500],
             ],
-            'Sate' => [
-                ['Ayam', '500 gr', 12000],
-                [$bumbuDasar, 'secukupnya', 4000],
-                ['Kecap', '2 sdm', 1500],
+            'Sosis Asam Manis' => [
+                ['Sosis', '150 gr', 5250],
+                ['Kecap Manis', '3 sdm', 4500],
+                ['Cuka', '1 sdm', 1500],
+                ['Minyak Goreng Kemasan', '2 sdm', 2000],
+                ['Bawang Merah', '2 siung', 2000],
             ],
-            'Bakso' => [
-                ['Daging Sapi', '300 gr', 25000],
-                [$bumbuDasar, 'secukupnya', 3000],
-                ['Mie', '1 porsi', 3000],
+            'Nasi Goreng Orak Arik' => [
+                ['Beras Medium', '1 porsi', 5000],
+                ['Telur Ayam Ras', '2 butir', 5000],
+                ['Bawang Putih Bonggol', '3 siung', 2400],
+                ['Kecap Manis', '2 sdm', 3000],
+                ['Minyak Goreng Kemasan', '2 sdm', 2000],
+            ],
+            'Orak Arik Telur Sosis' => [
+                ['Telur Ayam Ras', '3 butir', 7500],
+                ['Sosis', '100 gr', 3500],
+                ['Bawang Putih Bonggol', '3 siung', 2400],
+                ['Minyak Goreng Kemasan', '2 sdm', 2000],
+                ['Garam Konsumsi Beryodium (Halus)', '1 sdt', 500],
+            ],
+            'Tempe Goreng Kriuk' => [
+                ['Tempe', '1 blok', 3000],
+                ['Tepung Terigu Kemasan', '200 gr', 2000],
+                ['Garam Konsumsi Beryodium (Halus)', '1 sdt', 500],
+                ['Minyak Goreng Kemasan', '500 ml', 6000],
+                ['Cabai Rawit Merah', '2 buah', 1000],
+            ],
+            'Martabak Mie Telur' => [
+                ['Mie Instan', '1 bungkus', 2500],
+                ['Telur Ayam Ras', '2 butir', 5000],
+                ['Bawang Putih Bonggol', '2 siung', 1600],
+                ['Minyak Goreng Kemasan', '2 sdm', 2000],
+                ['Garam Konsumsi Beryodium (Halus)', '1 sdt', 500],
+            ],
+            'Tahu Tumis Kecap' => [
+                ['Tahu Mentah', '200 gr', 2000],
+                ['Kecap Manis', '2 sdm', 3000],
+                ['Minyak Goreng Kemasan', '2 sdm', 2000],
+                ['Bawang Putih Bonggol', '3 siung', 2400],
+                ['Garam Konsumsi Beryodium (Halus)', '1 sdt', 500],
             ],
         ];
 
